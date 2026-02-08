@@ -14,6 +14,7 @@ from .deployments import Deployments
 from .workflows import Workflows
 from .secrets import Secrets
 from .conversations import Conversations
+from .analytics import Analytics
 
 
 class SwfteClient:
@@ -64,6 +65,7 @@ class SwfteClient:
         self._workflows = None
         self._secrets = None
         self._conversations = None
+        self._analytics = None
     
     @property
     def chat(self) -> Chat:
@@ -134,6 +136,13 @@ class SwfteClient:
         if self._conversations is None:
             self._conversations = Conversations(self)
         return self._conversations
+
+    @property
+    def analytics(self) -> Analytics:
+        """Access prompt analytics, insights, and conversation history."""
+        if self._analytics is None:
+            self._analytics = Analytics(self)
+        return self._analytics
 
     def _get_headers(self) -> dict:
         """Get default headers for API requests."""

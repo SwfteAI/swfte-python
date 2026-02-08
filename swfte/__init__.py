@@ -6,16 +6,16 @@ and self-hosted models through a single API.
 
 Example usage:
     from swfte import SwfteClient
-    
+
     client = SwfteClient(api_key="sk-swfte-...")
-    
+
     # Chat completion
     response = client.chat.completions.create(
         model="openai:gpt-4",
         messages=[{"role": "user", "content": "Hello!"}]
     )
     print(response.choices[0].message.content)
-    
+
     # Streaming
     for chunk in client.chat.completions.create(
         model="anthropic:claude-3-opus",
@@ -23,6 +23,23 @@ Example usage:
         stream=True
     ):
         print(chunk.choices[0].delta.content, end="")
+
+Enterprise Analytics (v2.0):
+    # Access enterprise analytics features
+    client = SwfteClient(api_key="sk-swfte-...")
+
+    # Team analytics
+    team = client.analytics.enterprise.teams.summary("team-123")
+
+    # Anomaly detection
+    anomalies = client.analytics.enterprise.anomalies.detect("agent-123")
+
+    # Real-time streaming
+    for event in client.analytics.realtime.stream():
+        print(event)
+
+    # Custom alerts
+    client.analytics.alerts.create_rule(...)
 """
 
 from .client import SwfteClient
@@ -53,28 +70,48 @@ from .workflows import (
     Workflows,
 )
 
-__version__ = "1.0.0"
+# Core analytics (backwards compatible import)
+from .analytics import (
+    Analytics,
+    PromptInsight,
+    PromptPatternSummary,
+    TrendingTopic,
+    PIITestResult,
+    ConversationMessage,
+    ConversationHistory,
+)
+
+__version__ = "2.0.0"
+
 __all__ = [
+    # Client
     "SwfteClient",
+
+    # Models
     "ChatCompletion",
     "ChatCompletionChunk",
     "Message",
     "ImageGenerationResponse",
     "EmbeddingResponse",
     "Model",
+
+    # Exceptions
     "SwfteError",
     "AuthenticationError",
     "RateLimitError",
     "APIError",
     "InvalidRequestError",
+
     # Agent management
     "Agent",
     "Agents",
+
     # Deployment management
     "Deployment",
     "DeploymentState",
     "HealthStatus",
     "Deployments",
+
     # Workflow management
     "Workflow",
     "WorkflowNode",
@@ -83,5 +120,13 @@ __all__ = [
     "ExecutionStatus",
     "ValidationResult",
     "Workflows",
-]
 
+    # Analytics (core - for backwards compatibility)
+    "Analytics",
+    "PromptInsight",
+    "PromptPatternSummary",
+    "TrendingTopic",
+    "PIITestResult",
+    "ConversationMessage",
+    "ConversationHistory",
+]
