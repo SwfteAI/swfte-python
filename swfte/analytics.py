@@ -8,7 +8,8 @@ For new code, use:
     from swfte.analytics import Analytics, EnterpriseAnalytics, ...
 
 This module re-exports core analytics for backwards compatibility.
-"""
+
+"
 
 # Re-export from analytics package for backwards compatibility
 from .analytics.core import (
