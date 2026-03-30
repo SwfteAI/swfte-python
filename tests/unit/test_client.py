@@ -117,7 +117,7 @@ class TestSwfteClientInitialization:
 
         client = SwfteClient(api_key=mock_api_key)
 
-        assert client.base_url == "https://api.swfte.com/v1/gateway"
+        assert client.base_url == "https://api.swfte.com/v2/gateway"
 
 
 class TestSwfteClientHeaders:

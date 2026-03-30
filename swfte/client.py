@@ -23,7 +23,7 @@ class SwfteClient:
     
     Args:
         api_key: Your Swfte API key. If not provided, reads from SWFTE_API_KEY env var.
-        base_url: Base URL for the API. Defaults to https://api.swfte.com/v1/gateway
+        base_url: Base URL for the API. Defaults to https://api.swfte.com/v2/gateway
         timeout: Request timeout in seconds. Defaults to 60.
         max_retries: Maximum number of retries for failed requests. Defaults to 3.
     
@@ -38,7 +38,7 @@ class SwfteClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.swfte.com/v1/gateway",
+        base_url: str = "https://api.swfte.com/v2/gateway",
         timeout: int = 60,
         max_retries: int = 3,
         workspace_id: Optional[str] = None,

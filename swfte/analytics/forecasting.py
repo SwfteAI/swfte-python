@@ -132,7 +132,7 @@ class UsageForecaster:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def predict_usage(
         self,
@@ -239,7 +239,7 @@ class BudgetPredictor:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def forecast(
         self,
@@ -357,7 +357,7 @@ class CapacityPlanner:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def get_recommendations(
         self,
@@ -452,7 +452,7 @@ class TrendAnalyzer:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def analyze(
         self,

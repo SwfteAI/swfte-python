@@ -1,37 +1,19 @@
 # Swfte Python SDK
 
-[![PyPI Version](https://img.shields.io/pypi/v/swfte-sdk.svg)](https://pypi.org/project/swfte-sdk/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/swfte-sdk.svg)](https://pypi.org/project/swfte-sdk/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/swfte/agents-service/python-sdk.yml?branch=main)](https://github.com/swfte/agents-service/actions)
-[![Coverage](https://img.shields.io/codecov/c/github/swfte/agents-service)](https://codecov.io/gh/swfte/agents-service)
-[![Downloads](https://img.shields.io/pypi/dm/swfte-sdk.svg)](https://pypi.org/project/swfte-sdk/)
+[![PyPI version](https://img.shields.io/pypi/v/swfte.svg)](https://pypi.org/project/swfte/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-The official Python SDK for the Swfte AI Gateway - unified access to all AI providers through a single API.
+The official Python client library for the [Swfte API](https://docs.swfte.com) -- a unified gateway to 200+ AI models from OpenAI, Anthropic, Google, and self-hosted infrastructure through a single interface.
 
-## Table of Contents
+## Documentation
 
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Supported Models](#supported-models)
-- [Examples](#examples)
-- [Configuration](#configuration)
-- [Error Handling](#error-handling)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+Full API reference and guides are available at [docs.swfte.com](https://docs.swfte.com).
 
 ## Installation
 
 ```bash
-pip install swfte-sdk
-```
-
-Or with Poetry:
-
-```bash
-poetry add swfte-sdk
+pip install swfte
 ```
 
 ## Quick Start
@@ -39,73 +21,117 @@ poetry add swfte-sdk
 ```python
 from swfte import SwfteClient
 
-# Initialize the client
 client = SwfteClient(api_key="sk-swfte-...")
 
-# Chat completion
 response = client.chat.completions.create(
-    model="openai:gpt-4",  # or "anthropic:claude-3-opus", "deployed:my-model"
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Hello!"}
-    ]
+    model="openai:gpt-4",
+    messages=[{"role": "user", "content": "Hello, world!"}],
 )
-print(response.choices[0].message.content)
+
+print(response["choices"][0]["message"]["content"])
 ```
 
-## Features
+## Usage
 
-| Feature | Description |
-|---------|-------------|
-| **Unified API** | Access OpenAI, Anthropic, Google Gemini, and self-hosted models through one API |
-| **OpenAI Compatible** | Drop-in replacement for the OpenAI Python SDK |
-| **Streaming Support** | Real-time streaming responses |
-| **Automatic Retries** | Built-in retry logic for transient failures |
-| **Type Hints** | Full type annotations for better IDE support |
-| **Async Support** | Native async/await support for high-performance applications |
-| **Rate Limiting** | Automatic rate limit handling with exponential backoff |
+### Chat Completions
 
-## Supported Models
-
-### External Providers
-
-| Provider | Models | Capabilities |
-|----------|--------|--------------|
-| **OpenAI** | `openai:gpt-4`, `openai:gpt-4-turbo`, `openai:gpt-3.5-turbo`, `openai:dall-e-3`, `openai:whisper-1`, `openai:tts-1` | Chat, Images, Audio, Embeddings |
-| **Anthropic** | `anthropic:claude-3-opus`, `anthropic:claude-3-sonnet`, `anthropic:claude-3-haiku` | Chat |
-| **Google** | `google:gemini-pro`, `google:gemini-pro-vision` | Chat, Vision |
-
-### Self-Hosted (via RunPod)
-
-| Model | Use Case |
-|-------|----------|
-| `deployed:llama-3-8b` | Text generation |
-| `deployed:sdxl` | Image generation |
-| `deployed:whisper-large` | Audio transcription |
-
-## Examples
+```python
+response = client.chat.completions.create(
+    model="anthropic:claude-3-opus",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain quantum computing in one sentence."},
+    ],
+    temperature=0.7,
+    max_tokens=256,
+)
+```
 
 ### Streaming
 
 ```python
-for chunk in client.chat.completions.create(
+stream = client.chat.completions.create(
     model="openai:gpt-4",
-    messages=[{"role": "user", "content": "Tell me a story"}],
-    stream=True
-):
-    if chunk.choices[0].delta.content:
-        print(chunk.choices[0].delta.content, end="", flush=True)
+    messages=[{"role": "user", "content": "Write a short poem."}],
+    stream=True,
+)
+
+for chunk in stream:
+    content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+    print(content, end="", flush=True)
 ```
 
-### Image Generation
+### Agents
+
+```python
+# Create an agent
+agent = client.agents.create(
+    name="Research Assistant",
+    system_prompt="You are a research assistant specializing in AI.",
+    provider="OPENAI",
+    model="gpt-4",
+)
+
+# List agents
+agents = client.agents.list()
+
+# Update an agent
+client.agents.update(agent.id, description="Updated description")
+
+# Delete an agent
+client.agents.delete(agent.id)
+```
+
+### Workflows
+
+```python
+# Create a workflow
+workflow = client.workflows.create(
+    name="Content Pipeline",
+    nodes=[
+        {"id": "start", "type": "TRIGGER", "config": {"triggerType": "MANUAL"}},
+        {"id": "llm", "type": "LLM", "config": {"model": "gpt-4", "prompt": "Summarize: {{input}}"}},
+        {"id": "end", "type": "END", "config": {}},
+    ],
+    edges=[
+        {"id": "e1", "source": "start", "target": "llm"},
+        {"id": "e2", "source": "llm", "target": "end"},
+    ],
+)
+
+# Execute a workflow
+execution = client.workflows.execute(workflow.id, {"input": "Hello"})
+
+# Check execution status
+status = client.workflows.get_execution_status(execution.execution_id)
+```
+
+### GPU Model Deployments
+
+```python
+# Deploy a model to GPU infrastructure
+deployment = client.deployments.create(
+    model_name="meta-llama/Llama-3.2-8B-Instruct",
+    model_type="chat",
+)
+
+# Wait for deployment to be ready
+ready = client.deployments.wait_for_ready(deployment.id, timeout_ms=600000)
+print(f"Endpoint: {ready.endpoint_url}")
+
+# Clean up
+client.deployments.delete(deployment.id)
+```
+
+### Images
 
 ```python
 response = client.images.generate(
     model="openai:dall-e-3",
-    prompt="A sunset over mountains in watercolor style",
-    size="1024x1024"
+    prompt="A sunset over a mountain range, oil painting style",
+    size="1024x1024",
+    quality="hd",
 )
-print(response.data[0].url)
 ```
 
 ### Embeddings
@@ -113,61 +139,75 @@ print(response.data[0].url)
 ```python
 response = client.embeddings.create(
     model="openai:text-embedding-3-small",
-    input="The quick brown fox jumps over the lazy dog"
+    input="The quick brown fox jumps over the lazy dog",
 )
-print(f"Embedding dimension: {len(response.data[0].embedding)}")
 ```
 
-### Audio Transcription
+### Audio
 
 ```python
-with open("audio.mp3", "rb") as f:
-    result = client.audio.transcriptions.create(
-        model="openai:whisper-1",
-        file=f.read()
-    )
-print(result["text"])
-```
+# Speech to text
+transcript = client.audio.transcriptions.create(
+    model="openai:whisper-1",
+    file=open("recording.mp3", "rb").read(),
+)
 
-### Text-to-Speech
-
-```python
-audio = client.audio.speech.create(
+# Text to speech
+audio_bytes = client.audio.speech.create(
     model="openai:tts-1",
-    input="Hello world!",
-    voice="nova"
+    input="Hello, welcome to Swfte.",
+    voice="alloy",
 )
-with open("output.mp3", "wb") as f:
-    f.write(audio)
 ```
 
-### List Models
+### Secrets
 
 ```python
-models = client.models.list()
-for model in models:
-    print(f"{model.id} - {model.owned_by}")
+# Store an API key securely
+secret = client.secrets.create(
+    name="my-api-key",
+    secret_type="API_KEY",
+    value="sk-...",
+    environment="production",
+)
+
+# Validate a secret
+is_valid = client.secrets.validate(secret.id)
+```
+
+### Conversations
+
+```python
+# Create a conversation
+conversation = client.conversations.create(title="Support Chat")
+
+# Add messages
+client.conversations.add_message(conversation.id, role="user", content="Hello!")
+client.conversations.add_message(conversation.id, role="assistant", content="Hi there!")
+
+# Retrieve message history
+messages = client.conversations.get_messages(conversation.id)
 ```
 
 ## Configuration
 
 ```python
 client = SwfteClient(
-    api_key="sk-swfte-...",           # Required
-    base_url="https://api.swfte.com",  # Optional: custom endpoint
-    timeout=60,                        # Optional: request timeout
-    max_retries=3,                     # Optional: retry attempts
-    workspace_id="ws-123"              # Optional: workspace ID
+    api_key="sk-swfte-...",           # Required. Also reads SWFTE_API_KEY env var.
+    base_url="https://api.swfte.com/v2/gateway",  # Default
+    timeout=60,                        # Request timeout in seconds
+    max_retries=3,                     # Retry count for failed requests
+    workspace_id="ws-...",             # Workspace scoping. Also reads SWFTE_WORKSPACE_ID.
 )
 ```
 
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `SWFTE_API_KEY` | Default API key |
-| `SWFTE_WORKSPACE_ID` | Default workspace ID |
-| `SWFTE_BASE_URL` | Custom API base URL |
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `api_key` | `str` | `SWFTE_API_KEY` env | Your Swfte API key |
+| `base_url` | `str` | `https://api.swfte.com/v2/gateway` | API base URL |
+| `timeout` | `int` | `60` | Request timeout (seconds) |
+| `max_retries` | `int` | `3` | Max retry attempts |
+| `workspace_id` | `str` | `SWFTE_WORKSPACE_ID` env | Workspace ID |
 
 ## Error Handling
 
@@ -179,37 +219,50 @@ client = SwfteClient(api_key="sk-swfte-...")
 try:
     response = client.chat.completions.create(
         model="openai:gpt-4",
-        messages=[{"role": "user", "content": "Hello!"}]
+        messages=[{"role": "user", "content": "Hello"}],
     )
 except AuthenticationError:
     print("Invalid API key")
 except RateLimitError:
-    print("Rate limit exceeded, please try again later")
+    print("Rate limit exceeded, retry later")
 except APIError as e:
     print(f"API error: {e}")
 ```
 
-## Documentation
+| Exception | Description |
+|---|---|
+| `SwfteError` | Base exception for all SDK errors |
+| `AuthenticationError` | Invalid or missing API key |
+| `RateLimitError` | Rate limit exceeded (HTTP 429) |
+| `APIError` | General API error with status code |
+| `InvalidRequestError` | Malformed request (HTTP 400) |
 
-- [API Reference](https://docs.swfte.com/python-sdk)
-- [Migration Guide](https://docs.swfte.com/python-sdk/migration)
-- [Examples](https://github.com/swfte/agents-service/tree/main/sdks/python/examples)
-- [Changelog](CHANGELOG.md)
+## Supported Providers
+
+| Provider | Models | Qualifier Prefix |
+|---|---|---|
+| OpenAI | GPT-4, GPT-4o, o1, DALL-E, Whisper, TTS | `openai:` |
+| Anthropic | Claude 3.5, Claude 3 Opus/Sonnet/Haiku | `anthropic:` |
+| Google | Gemini 2.0, Gemini 1.5 Pro/Flash | `google:` |
+| Self-hosted | Any model via RunPod/vLLM deployment | `runpod:` |
+
+## Requirements
+
+- Python 3.8 or later
+- `requests` >= 2.28.0
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines and our [Code of Conduct](CODE_OF_CONDUCT.md).
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+All contributors must sign the [Swfte CLA](https://cla.swfte.com) before their first pull request can be merged.
+
+## Security
+
+To report a vulnerability, please see [SECURITY.md](SECURITY.md). Do not open a public issue for security concerns.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
----
-
-Built with love by the [Swfte](https://swfte.com) team.
+Copyright (c) 2025 Swfte, Inc.

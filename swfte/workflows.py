@@ -226,7 +226,7 @@ class Workflows:
         base = self._client.base_url
         # Remove /gateway if present to get the service root
         if "/gateway" in base:
-            base = base.replace("/v1/gateway", "")
+            base = base.replace("/v2/gateway", "").replace("/v1/gateway", "")
         return f"{base}/v2/workflows"
     
     def _make_request(

@@ -186,7 +186,7 @@ class CustomMetrics:
         self._dashboards_manager = None
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     @property
     def metrics(self) -> "MetricsManager":
@@ -326,7 +326,7 @@ class MetricsManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,
@@ -452,7 +452,7 @@ class DimensionsManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,
@@ -549,7 +549,7 @@ class AggregationsManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,
@@ -630,7 +630,7 @@ class DashboardsManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,

@@ -294,7 +294,7 @@ class PromptAnalytics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def summary(
         self,
@@ -584,7 +584,7 @@ class PIIAnalytics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def test(self, text: str, compliance_mode: Optional[str] = None) -> PIITestResult:
         """
@@ -709,7 +709,7 @@ class ConversationAnalytics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def get(
         self,

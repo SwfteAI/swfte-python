@@ -369,7 +369,7 @@ class TeamAnalytics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def summary(
         self,
@@ -493,7 +493,7 @@ class AnomalyDetection:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def detect(
         self,
@@ -618,7 +618,7 @@ class ABTestingAnalytics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create_test(
         self,
@@ -741,7 +741,7 @@ class ComplianceReporting:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def generate_report(
         self,
@@ -856,7 +856,7 @@ class CostOptimization:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def get_recommendations(
         self,
@@ -965,7 +965,7 @@ class ModelComparison:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def benchmark(
         self,
@@ -1048,7 +1048,7 @@ class UserJourneyAnalytics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def get_journey(self, user_id: str) -> UserJourney:
         """Get a user's journey."""
@@ -1136,7 +1136,7 @@ class RAGQualityMetrics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def get_metrics(
         self,
@@ -1218,7 +1218,7 @@ class EmbeddingAnalytics:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def get_metrics(
         self,

@@ -221,7 +221,7 @@ class AlertManager:
         self._policies = None
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     # -------------------------------------------------------------------------
     # Alert Rules
@@ -595,7 +595,7 @@ class WebhookManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,
@@ -700,7 +700,7 @@ class SlackManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,
@@ -790,7 +790,7 @@ class PagerDutyManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,
@@ -864,7 +864,7 @@ class EscalationManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,
@@ -950,7 +950,7 @@ class PolicyManager:
         self._client = client
 
     def _get_base_url(self) -> str:
-        return self._client.base_url.replace("/v1/gateway", "")
+        return self._client.base_url.replace("/v2/gateway", "").replace("/v1/gateway", "")
 
     def create(
         self,

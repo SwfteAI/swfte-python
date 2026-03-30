@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
 authors = [
-    {name = "Swfte", email = "sdk@swfte.com"}
+    {name = "Swfte, Inc.", email = "sdk@swfte.com"}
 ]
 keywords = ["ai", "llm", "openai", "anthropic", "gemini", "sdk", "api"]
 classifiers = [
@@ -53,11 +53,11 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://swfte.com"
+Homepage = "https://docs.swfte.com"
 Documentation = "https://docs.swfte.com/sdk/python"
-Repository = "https://github.com/swfte/swfte-python"
-Changelog = "https://github.com/swfte/swfte-python/blob/main/CHANGELOG.md"
-Issues = "https://github.com/swfte/swfte-python/issues"
+Repository = "https://github.com/swfteai/swfte-python"
+Changelog = "https://github.com/swfteai/swfte-python/blob/main/CHANGELOG.md"
+Issues = "https://github.com/swfteai/swfte-python/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
