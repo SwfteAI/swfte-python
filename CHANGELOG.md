@@ -5,10 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## 1.1.0 — 2026-05-07
 
 ### Added
-- Initial development of features for v1.0.0
+- New V2 resource clients exposed on `SwfteClient`:
+  - `client.chatflows` — full ChatFlow CRUD, builder, sessions, versions and publishing.
+  - `client.datasets` and `client.documents` — RAG dataset and document management with batch
+    update + processing-status endpoints.
+  - `client.files` — single and batch upload, list, get, download, preview, delete, cleanup.
+  - `client.rag` — hybrid search, reranking, model catalogues, retrieval strategies and
+    BM25 vocabulary management.
+  - `client.mcp` — connect/list/disconnect MCP servers, list tools, schema, single and
+    batch execute, analytics, health-check and tool status.
+  - `client.modules` — module CRUD, resource attachment, build (with SSE progress),
+    versions, QA bank, impact reports.
+  - `client.marketplace` — browse, install, list installations and uninstall.
+  - `client.voice_calls` — list, in-progress, get, transcript, recording, audit and
+    chatflow-scoped call lookup.
+  - `client.audit` — workspace event query, resource-scoped events, "my events" and
+    CSV/JSON export.
+  - `client.cost_control` — routing rule CRUD + toggle, workspace and per-model usage
+    caps, usage statistics and per-deployment scaling configuration.
+  - `client.agent_wizard` — generate, refine, review and persist agents from prompts
+    or templates; link MCP tools and knowledge bases.
+- `docs/cookbook/` — runnable Python examples for each of the top-15 V2 controllers.
+- `ABOUT.md` — full Swfte company profile.
+- `README.md` "About Swfte" section and "Resources" footer with links to
+  [swfte.com](https://www.swfte.com), [/resources](https://www.swfte.com/resources),
+  [/developers](https://www.swfte.com/developers), [/pricing](https://www.swfte.com/pricing),
+  [/security](https://www.swfte.com/security) and [status.swfte.com](https://status.swfte.com).
+
+### Changed
+- `User-Agent` bumped to `swfte-python/1.1.0`.
+- Workspace ID now sent as both `X-Workspace-ID` and `x-workspace-id` for compatibility
+  with strict header normalisation in some intermediaries.
+- `pyproject.toml` URLs now point to [github.com/SwfteAI/swfte-python](https://github.com/SwfteAI/swfte-python)
+  and [www.swfte.com](https://www.swfte.com).
 
 ## [1.0.0] - 2025-01-XX
 
@@ -34,5 +66,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/swfteai/swfte-python/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/swfteai/swfte-python/releases/tag/v1.0.0
+[1.1.0]: https://github.com/SwfteAI/swfte-python/releases/tag/v1.1.0
+[1.0.0]: https://github.com/SwfteAI/swfte-python/releases/tag/v1.0.0

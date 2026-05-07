@@ -81,7 +81,21 @@ from .analytics import (
     ConversationHistory,
 )
 
-__version__ = "2.0.0"
+# V2 resources (1.1.0)
+from .agent_wizard import AgentWizard
+from .audit import Audit
+from .chatflows import ChatFlows
+from .cost_control import CostControl
+from .datasets import Datasets
+from .documents import Documents
+from .files import Files
+from .marketplace import Marketplace
+from .mcp import Mcp
+from .modules import Modules
+from .rag import Rag
+from .voice_calls import VoiceCalls
+
+__version__ = "1.1.0"
 
 __all__ = [
     # Client
@@ -129,4 +143,18 @@ __all__ = [
     "PIITestResult",
     "ConversationMessage",
     "ConversationHistory",
+
+    # V2 resources (1.1.0)
+    "AgentWizard",
+    "Audit",
+    "ChatFlows",
+    "CostControl",
+    "Datasets",
+    "Documents",
+    "Files",
+    "Marketplace",
+    "Mcp",
+    "Modules",
+    "Rag",
+    "VoiceCalls",
 ]
