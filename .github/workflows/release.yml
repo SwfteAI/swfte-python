@@ -1,69 +1,171 @@
 name: Release
 
-# Tag-based releases require manual approval before any publish runs.
-# The publish job is gated by a GitHub Environment named `pypi-publish-prod`
-# with required reviewers (configured under Settings → Environments).
-# Without that approval, the job pauses indefinitely and nothing reaches PyPI.
+# ─────────────────────────────────────────────────────────────────────────────
+# The publish contract, which is the same one nexus-devtools uses:
+#
+#   1. A TAG PUSH BUILDS AND VERIFIES. It does not publish. Pushing `v1.1.1`
+#      tells you whether that commit is releasable; it does not release it.
+#      The previous version of this file published on tag push, with the
+#      confirmation guard applying only to manual runs — so `git push --tags`
+#      went straight to PyPI with nothing in the way.
+#
+#   2. PUBLISHING IS A DELIBERATE MANUAL ACT. `workflow_dispatch`, with the
+#      publish box ticked AND the exact version typed. A PyPI version cannot be
+#      recalled — `yank` hides it but burns the number forever — so ticking a
+#      box is too cheap a gesture. Typing 1.1.0 into a run that builds 1.1.1
+#      stops before anything is uploaded.
+#
+#   3. THE VERSION COMES FROM THE SOURCE TREE, never from the tag. Preflight
+#      reads pyproject.toml and everything downstream uses that, so a tag that
+#      disagrees with the package is a failure rather than a surprise.
+# ─────────────────────────────────────────────────────────────────────────────
+
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type PUBLISH to confirm an intentional release'
-        required: true
+      publish:
+        description: "Actually publish to PyPI"
+        type: boolean
+        default: false
+      confirm_version:
+        description: "To publish, type the exact version (e.g. 1.1.1). A mismatch aborts."
+        type: string
+        default: ""
+  push:
+    # Build + verify on a release tag. Deliberately does NOT publish.
+    tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  guard:
+  preflight:
+    name: preflight
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Confirm intentional manual release
-        if: github.event_name == 'workflow_dispatch'
+      - uses: actions/checkout@v4
+
+      - name: Resolve the version from the source tree
+        id: version
         run: |
-          if [ "${{ github.event.inputs.confirm }}" != "PUBLISH" ]; then
-            echo "::error::Manual run requires confirm=PUBLISH"
+          version=$(python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "source tree declares $version"
+
+      - name: A release tag must match the source version
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          if [ "$tag" != "$VERSION" ]; then
+            echo "::error title=Version drift::tag v$tag, pyproject $VERSION"
             exit 1
           fi
-      - run: echo "Release guard passed for ${GITHUB_REF}"
+          echo "tag v$tag matches pyproject"
 
-  publish:
+      - name: The version must not already be on PyPI
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # A re-used version fails at upload with a confusing 400. Say so here.
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/swfte-sdk/$VERSION/json")
+          if [ "$code" = "200" ]; then
+            echo "::error title=Already published::swfte-sdk $VERSION exists on PyPI. Bump the version."
+            exit 1
+          fi
+          echo "swfte-sdk $VERSION is not on PyPI (HTTP $code)"
+
+  build:
+    name: build
+    needs: preflight
     runs-on: ubuntu-latest
-    needs: guard
-    environment:
-      name: pypi-publish-prod
-      url: https://pypi.org/project/swfte/
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install build dependencies
+      - name: Build sdist and wheel
         run: |
-          python -m pip install --upgrade pip
-          pip install build twine
+          python -m pip install --upgrade pip build twine
+          python -m build
 
-      - name: Build package
-        run: python -m build
+      - name: Check the artefacts render on PyPI
+        # twine check catches a README that PyPI will reject *after* the version
+        # number is already burned.
+        run: python -m twine check dist/*
+
+      - name: Import the built wheel in a clean environment
+        # Building is not the same as installing. A packaging mistake that omits
+        # a subpackage builds perfectly and fails on first import.
+        run: |
+          python -m venv /tmp/verify
+          /tmp/verify/bin/pip install --quiet dist/*.whl
+          /tmp/verify/bin/python -c "from swfte import SwfteClient; print('import ok')"
+          /tmp/verify/bin/python -c "
+          from swfte import SwfteClient
+          c = SwfteClient(api_key='probe-only')
+          assert c.base_url == 'https://api.swfte.com/agents/v2/gateway', c.base_url
+          print('shipped default base_url ok:', c.base_url)
+          "
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: publish
+    needs: [preflight, build]
+    # Both conditions, and only on a manual run. A tag push can never reach here.
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-publish-prod
+      url: https://pypi.org/project/swfte-sdk/
+    permissions:
+      contents: write
+      # Present so this can move to PyPI Trusted Publishing without another
+      # edit: configure a publisher for SwfteAI/swfte-python, workflow
+      # release.yml, environment pypi-publish-prod, then delete the password
+      # line below and no long-lived token needs to exist at all.
+      id-token: write
+    steps:
+      - name: Confirm the publish
+        env:
+          VERSION: ${{ needs.preflight.outputs.version }}
+          CONFIRM: ${{ inputs.confirm_version }}
+        run: |
+          if [ "$CONFIRM" != "$VERSION" ]; then
+            echo "::error title=Publish not confirmed::typed '$CONFIRM', building '$VERSION'"
+            echo "Re-dispatch and type $VERSION into confirm_version to publish."
+            exit 1
+          fi
+          echo "confirmed $VERSION"
+
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
 
       - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          packages-dir: dist
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Create the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.preflight.outputs.version }}
           files: dist/*
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
