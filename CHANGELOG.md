@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.1 — 2026-09-01
+
+### Fixed
+
+- **The shipped default `base_url` returned 403.** `SwfteClient(api_key=...)` —
+  the first line of every quickstart — could not make a request. The default
+  pointed at `https://api.swfte.com/v2/gateway`, which is not a route: the
+  gateway lives behind `/agents`, so the request was refused with a bare nginx
+  403 that surfaced as an HTML blob rather than a usable error. The default is
+  now `https://api.swfte.com/agents/v2/gateway`.
+
+  Verified against production with a key created in the Connect console:
+  the old path answers 403, the new one answers 200 with a completion and
+  metered usage. Anyone who had worked around this by passing `base_url`
+  explicitly is unaffected.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
