@@ -63,12 +63,23 @@ class V2Resource:
         params: Optional[Dict[str, Any]] = None,
         files: Optional[Dict[str, Any]] = None,
         stream: bool = False,
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> Any:
-        """Perform an HTTP request and return parsed JSON (or raw response if streaming)."""
+        """
+        Perform an HTTP request and return parsed JSON (or raw response if streaming).
+
+        Deliberately no retry: a resource that wants one must ask for it,
+        because some V2 endpoints have side effects.
+
+        ``extra_headers`` merges over the client defaults — used for
+        per-request headers such as ``Idempotency-Key``.
+        """
         headers = self._client._get_headers()
         if files is not None:
             # let requests build the multipart boundary
             headers.pop("Content-Type", None)
+        if extra_headers:
+            headers.update(extra_headers)
 
         response = requests.request(
             method=method,

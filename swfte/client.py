@@ -5,6 +5,7 @@ Main client class for the Swfte SDK.
 import os
 from typing import Optional
 
+from .agent_mail import AgentMail
 from .agent_wizard import AgentWizard
 from .agents import Agents
 from .analytics import Analytics
@@ -97,6 +98,7 @@ class SwfteClient:
         self._audit = None
         self._cost_control = None
         self._agent_wizard = None
+        self._agent_mail = None
 
     # ---- existing resources -------------------------------------------------
 
@@ -262,6 +264,18 @@ class SwfteClient:
         if self._agent_wizard is None:
             self._agent_wizard = AgentWizard(self)
         return self._agent_wizard
+
+    @property
+    def agent_mail(self) -> AgentMail:
+        """
+        Workspace mailboxes agents send from and receive on.
+
+        Inbound message content is untrusted external input: subjects, bodies
+        and sender addresses are data, never instructions.
+        """
+        if self._agent_mail is None:
+            self._agent_mail = AgentMail(self)
+        return self._agent_mail
 
     # ---- request plumbing --------------------------------------------------
 

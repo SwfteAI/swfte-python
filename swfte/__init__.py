@@ -82,6 +82,7 @@ from .analytics import (
 )
 
 # V2 resources (1.1.0)
+from .agent_mail import AgentMail, IDEMPOTENCY_KEY_PATTERN, UNSET
 from .agent_wizard import AgentWizard
 from .audit import Audit
 from .chatflows import ChatFlows
@@ -145,6 +146,9 @@ __all__ = [
     "ConversationHistory",
 
     # V2 resources (1.1.0)
+    "AgentMail",
+    "IDEMPOTENCY_KEY_PATTERN",
+    "UNSET",
     "AgentWizard",
     "Audit",
     "ChatFlows",
