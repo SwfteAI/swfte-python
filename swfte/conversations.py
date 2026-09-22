@@ -129,10 +129,7 @@ class Conversations:
 
     def _get_base_url(self) -> str:
         """Get the base URL for conversation endpoints."""
-        base = self._client.base_url
-        # Remove /gateway if present to get the service root
-        if "/gateway" in base:
-            base = base.replace("/v1/gateway", "").replace("/v2/gateway", "")
+        base = self._client.api_base_url
         return f"{base}/v1/conversations"
 
     def _make_request(

@@ -2,21 +2,59 @@
 Workflow management for the Swfte SDK.
 """
 
+import json
 from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+from urllib.parse import quote
 import requests
 import time
 
+from .exceptions import (
+    APIError,
+    InvalidRequestError,
+    WorkflowExecutionError,
+    WorkflowTimeoutError,
+)
+
 
 class ExecutionStatus(Enum):
-    """Workflow execution status enumeration."""
+    """Workflow execution status enumeration.
+
+    The server has used ``SUCCESS``, ``SUCCEEDED`` and ``COMPLETED`` for a
+    successful run and both ``CANCELLED`` and ``CANCELED``; all are accepted.
+    """
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     PAUSED = "PAUSED"
     COMPLETED = "COMPLETED"
+    SUCCESS = "SUCCESS"
+    SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
+    TIMEOUT = "TIMEOUT"
     CANCELLED = "CANCELLED"
+    CANCELED = "CANCELED"
+
+
+#: Statuses meaning the run finished successfully.
+SUCCESS_STATUSES = frozenset({"SUCCESS", "SUCCEEDED", "COMPLETED"})
+#: Statuses meaning the run finished unsuccessfully.
+FAILURE_STATUSES = frozenset({"FAILED", "ERROR", "TIMEOUT", "TIMED_OUT"})
+#: Statuses meaning the run was cancelled (both spellings).
+CANCELLED_STATUSES = frozenset({"CANCELLED", "CANCELED"})
+
+
+def classify_execution_status(status: Optional[str]) -> str:
+    """Return ``"succeeded"``, ``"failed"``, ``"cancelled"`` or ``"running"``
+    for a raw status string (case-insensitive; unknown or missing -> running)."""
+    s = (status or "").upper()
+    if s in SUCCESS_STATUSES:
+        return "succeeded"
+    if s in FAILURE_STATUSES:
+        return "failed"
+    if s in CANCELLED_STATUSES:
+        return "cancelled"
+    return "running"
 
 
 @dataclass
@@ -140,36 +178,104 @@ class Workflow:
 
 @dataclass
 class WorkflowExecution:
-    """Represents a workflow execution."""
+    """Represents a workflow execution.
+
+    Built from either a flat execution record or the status endpoint's
+    ``{"execution": {...}, "nodeExecutions": [...], "progress": n}`` shape; the
+    nested record's fields are lifted. ``status_raw`` is the server's status
+    string (upper-cased) even when it is not an ``ExecutionStatus`` member;
+    ``raw`` is the full body.
+    """
     id: str
     workflow_id: str
     status: ExecutionStatus
     progress: int = 0
     inputs: Optional[Dict] = None
-    outputs: Optional[Dict] = None
+    outputs: Optional[Any] = None
     error: Optional[str] = None
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
-    
+    status_raw: str = ""
+    node_executions: Optional[List[Dict]] = None
+    raw: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def outcome(self) -> str:
+        """``"succeeded"``, ``"failed"``, ``"cancelled"`` or ``"running"``."""
+        return classify_execution_status(self.status_raw or self.status.value)
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.outcome != "running"
+
+    @property
+    def succeeded(self) -> bool:
+        return self.outcome == "succeeded"
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkflowExecution":
         """Create a WorkflowExecution from a dictionary."""
-        status_str = data.get("status", "PENDING")
+        data = data if isinstance(data, dict) else {}
+        nested = data.get("execution") if isinstance(data.get("execution"), dict) else {}
+
+        def pick(*keys: str) -> Any:
+            for key in keys:
+                if data.get(key) is not None:
+                    return data[key]
+                if nested.get(key) is not None:
+                    return nested[key]
+            return None
+
+        status_raw = str(pick("status") or "").upper()
         try:
-            status = ExecutionStatus(status_str)
+            status = ExecutionStatus(status_raw)
         except ValueError:
             status = ExecutionStatus.PENDING
-        
+
+        error_info = nested.get("errorInfo") if isinstance(nested.get("errorInfo"), dict) else {}
+        error = pick("error")
+        if error is None:
+            error = error_info.get("message") or error_info.get("errorMessage") or nested.get("errorMessage")
+        if error is not None and not isinstance(error, str):
+            error = json.dumps(error)
+
+        outputs = data.get("outputs")
+        if outputs is None:
+            outputs = nested.get("outputData", nested.get("outputs"))
+
         return cls(
-            id=data.get("executionId", data.get("id", "")),
-            workflow_id=data.get("workflowId", data.get("workflow_id", "")),
+            id=pick("executionId", "id") or "",
+            workflow_id=pick("workflowId", "workflow_id") or "",
             status=status,
-            progress=data.get("progress", 0),
-            inputs=data.get("inputs"),
-            outputs=data.get("outputs"),
-            error=data.get("error"),
-            started_at=data.get("startedAt", data.get("started_at")),
-            completed_at=data.get("completedAt", data.get("completed_at")),
+            progress=data.get("progress", nested.get("progress", 0)) or 0,
+            inputs=pick("inputs", "inputData"),
+            outputs=outputs,
+            error=error,
+            started_at=pick("startedAt", "started_at", "startTime"),
+            completed_at=pick("completedAt", "completed_at", "endTime"),
+            status_raw=status_raw,
+            node_executions=data.get("nodeExecutions"),
+            raw=data,
+        )
+
+
+@dataclass
+class WorkflowInvocation:
+    """Response of ``POST /v2/workflows/{id}/invoke`` (HTTP 202): the run was accepted."""
+    execution_id: str
+    workflow_id: Optional[str] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
+    raw: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "WorkflowInvocation":
+        return cls(
+            execution_id=data["executionId"],
+            workflow_id=data.get("workflowId"),
+            status=data.get("status"),
+            message=data.get("message"),
+            raw=data,
         )
 
 
@@ -211,10 +317,12 @@ class Workflows:
             ]
         )
         
-        # Execute workflow
+        # Production: run the PUBLISHED version and wait for it
+        result = client.workflows.invoke_and_wait(workflow.id, {"message": "Hello"})
+        print(result.status_raw, result.outputs)
+
+        # Test run of the current (draft) definition
         execution = client.workflows.execute(workflow.id, {"message": "Hello"})
-        
-        # Wait for completion
         execution = client.workflows.wait_for_completion(execution.id)
     """
     
@@ -223,10 +331,7 @@ class Workflows:
     
     def _get_base_url(self) -> str:
         """Get the base URL for workflow endpoints."""
-        base = self._client.base_url
-        # Remove /gateway if present to get the service root
-        if "/gateway" in base:
-            base = base.replace("/v2/gateway", "").replace("/v1/gateway", "")
+        base = self._client.api_base_url
         return f"{base}/v2/workflows"
     
     def _make_request(
@@ -455,8 +560,13 @@ class Workflows:
         skip_validation: bool = False,
     ) -> WorkflowExecution:
         """
-        Execute a workflow.
-        
+        Run the workflow's CURRENT (editable/draft) definition — Studio's test path.
+
+        ``POST /v2/workflows/{id}/execute``. The server refuses (409
+        ``WORKFLOW_NOT_PUBLISHED``) a workflow that was never published unless
+        the inputs carry ``testingFlag: True``. Production callers should use
+        :meth:`invoke`, which runs the published snapshot.
+
         Args:
             workflow_id: The ID of the workflow to execute.
             inputs: Input data for the workflow.
@@ -470,19 +580,113 @@ class Workflows:
         response = self._make_request("POST", url, data=inputs or {}, params=params)
         return WorkflowExecution.from_dict(response)
     
+    def invoke(self, workflow_id: str, inputs: Optional[Dict[str, Any]] = None) -> WorkflowInvocation:
+        """
+        Run the workflow's PUBLISHED snapshot — the production path.
+
+        ``POST /v2/workflows/{id}/invoke`` with the inputs as the JSON body. The
+        server answers 202 with an ``executionId`` once the run is queued. A
+        never-published workflow answers 409 (``PUBLISHED_SNAPSHOT_UNAVAILABLE``),
+        raised as ``APIError`` with ``status_code == 409``. ``testingFlag`` is
+        rejected (400). Not retried: a retry could start the run twice.
+
+        Returns:
+            WorkflowInvocation with ``execution_id``.
+        """
+        if not workflow_id:
+            raise InvalidRequestError("workflow_id is required")
+        res = self._client._api_request(
+            "POST",
+            f"/v2/workflows/{quote(workflow_id, safe='')}/invoke",
+            json=inputs or {},
+        )
+        if not isinstance(res, dict) or not res.get("executionId"):
+            raise APIError("Invoke response did not include an executionId", status_code=502, body=res)
+        return WorkflowInvocation.from_dict(res)
+
     def get_execution_status(self, execution_id: str) -> WorkflowExecution:
         """
         Get execution status.
-        
+
+        ``GET /v2/workflows/executions/{execution_id}/status``. The nested
+        ``execution`` record is lifted; see :class:`WorkflowExecution`.
+
         Args:
             execution_id: The ID of the execution.
-        
+
         Returns:
             The execution status.
+
+        Raises:
+            AuthenticationError (401/403), RateLimitError (429), APIError (other non-2xx).
         """
-        url = f"{self._get_base_url()}/executions/{execution_id}/status"
-        response = self._make_request("GET", url)
-        return WorkflowExecution.from_dict(response)
+        if not execution_id:
+            raise InvalidRequestError("execution_id is required")
+        response = self._client._api_request(
+            "GET", f"/v2/workflows/executions/{quote(execution_id, safe='')}/status"
+        )
+        execution = WorkflowExecution.from_dict(response or {})
+        if not execution.id:
+            execution.id = execution_id
+        return execution
+
+    def invoke_and_wait(
+        self,
+        workflow_id: str,
+        inputs: Optional[Dict[str, Any]] = None,
+        timeout: float = 300,
+        poll_interval: float = 2,
+    ) -> WorkflowExecution:
+        """
+        Invoke the published workflow and poll until the run reaches a terminal status.
+
+        Args:
+            workflow_id: The workflow to run.
+            inputs: Workflow inputs.
+            timeout: Give up after this many seconds (client side; the run keeps going).
+            poll_interval: Seconds between status polls.
+
+        Returns:
+            The final execution when it succeeded (``SUCCESS``, ``SUCCEEDED`` or ``COMPLETED``).
+
+        Raises:
+            WorkflowExecutionError: the run ended FAILED/TIMEOUT or CANCELLED/CANCELED
+                (``.execution`` holds the final status). Also a ``RuntimeError``.
+            WorkflowTimeoutError: ``timeout`` elapsed first; the run is not cancelled and
+                ``.execution_id`` can still be polled. Also a ``TimeoutError``.
+        """
+        invocation = self.invoke(workflow_id, inputs)
+        return self._poll_until_terminal(invocation.execution_id, timeout, poll_interval)
+
+    def _poll_until_terminal(
+        self, execution_id: str, timeout: float, poll_interval: float
+    ) -> WorkflowExecution:
+        deadline = time.monotonic() + max(0.0, timeout)
+        interval = max(0.0, poll_interval)
+        while True:  # always polls at least once, even with timeout=0
+            execution = self.get_execution_status(execution_id)
+            outcome = execution.outcome
+            status = execution.status_raw or execution.status.value
+            if outcome == "succeeded":
+                return execution
+            if outcome == "failed":
+                detail = f": {execution.error}" if execution.error else ""
+                raise WorkflowExecutionError(
+                    f"Execution {execution_id} {status.lower()}{detail}",
+                    execution_id, status, execution,
+                )
+            if outcome == "cancelled":
+                raise WorkflowExecutionError(
+                    f"Execution {execution_id} was cancelled", execution_id, status, execution
+                )
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise WorkflowTimeoutError(
+                    f"Execution {execution_id} did not complete within {timeout}s "
+                    f"(last status {status or 'unknown'})",
+                    execution_id, execution,
+                )
+            time.sleep(min(interval, remaining))
     
     def pause_execution(self, execution_id: str) -> WorkflowExecution:
         """
@@ -536,42 +740,24 @@ class Workflows:
         poll_interval: int = 5,
     ) -> WorkflowExecution:
         """
-        Wait for a workflow execution to complete.
-        
+        Wait for an existing execution (from :meth:`execute` or :meth:`invoke`) to finish.
+
+        Same terminal rules as :meth:`invoke_and_wait`.
+
         Args:
             execution_id: The ID of the execution.
             timeout: Maximum time to wait in seconds.
             poll_interval: Time between status checks in seconds.
-        
+
         Returns:
             The completed execution.
-        
+
         Raises:
-            TimeoutError: If execution doesn't complete within timeout.
-            RuntimeError: If execution fails.
+            WorkflowTimeoutError (a ``TimeoutError``): execution didn't finish within timeout.
+            WorkflowExecutionError (a ``RuntimeError``): execution failed or was cancelled.
         """
-        start_time = time.time()
-        
-        while True:
-            elapsed = time.time() - start_time
-            if elapsed > timeout:
-                raise TimeoutError(
-                    f"Execution {execution_id} did not complete within {timeout}s"
-                )
-            
-            execution = self.get_execution_status(execution_id)
-            
-            if execution.status == ExecutionStatus.COMPLETED:
-                return execution
-            elif execution.status == ExecutionStatus.FAILED:
-                raise RuntimeError(
-                    f"Execution {execution_id} failed: {execution.error}"
-                )
-            elif execution.status == ExecutionStatus.CANCELLED:
-                raise RuntimeError(f"Execution {execution_id} was cancelled")
-            
-            time.sleep(poll_interval)
-    
+        return self._poll_until_terminal(execution_id, timeout, poll_interval)
+
     def clone(
         self,
         workflow_id: str,

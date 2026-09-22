@@ -102,6 +102,15 @@ agents = client.agents.list()
 # Update an agent
 client.agents.update(agent.id, description="Updated description")
 
+# Chat with an agent: POST /v1/agents/{id}/chat/{user_id}, reply text in .response
+reply = client.agents.chat(agent.id, "What changed in Q3?", user_id="user-42")
+print(reply.response)
+
+# Continue the same conversation (user_id defaults to "sdk-user" when omitted)
+follow_up = client.agents.chat(
+    agent.id, "And Q4?", user_id="user-42", conversation_id=reply.conversation_id
+)
+
 # Delete an agent
 client.agents.delete(agent.id)
 ```
@@ -123,11 +132,53 @@ workflow = client.workflows.create(
     ],
 )
 
-# Execute a workflow
-execution = client.workflows.execute(workflow.id, {"input": "Hello"})
+# Production: run the PUBLISHED version (POST /v2/workflows/{id}/invoke, 202 + executionId)
+invocation = client.workflows.invoke(workflow.id, {"input": "Hello"})
+status = client.workflows.get_execution_status(invocation.execution_id)
+print(status.status_raw, status.progress)
 
-# Check execution status
-status = client.workflows.get_execution_status(execution.execution_id)
+# ...or invoke and poll until the run finishes (timeout/poll_interval in seconds)
+from swfte import WorkflowExecutionError, WorkflowTimeoutError
+
+try:
+    done = client.workflows.invoke_and_wait(
+        workflow.id, {"input": "Hello"}, timeout=120, poll_interval=2
+    )
+    print(done.status_raw, done.outputs)  # SUCCESS / SUCCEEDED / COMPLETED
+except WorkflowExecutionError as err:     # FAILED, TIMEOUT, CANCELLED/CANCELED
+    print("run ended", err.status, err)
+except WorkflowTimeoutError as err:       # gave up polling; the run continues
+    print("still running", err.execution_id)
+
+# Test run of the current (unpublished) definition — Studio's draft path
+execution = client.workflows.execute(workflow.id, {"input": "Hello", "testingFlag": True})
+```
+
+`invoke()` runs the published snapshot and is what production callers should
+use; unpublished edits do not affect it, and a never-published workflow answers
+409. `execute()` runs the editable definition (the draft) and exists for test
+runs. Neither is retried by the SDK, so a network blip never starts a run twice.
+
+### Catalog
+
+```python
+# Find proven artifacts across kinds
+page = client.catalog.search(
+    q="invoice triage",
+    kinds=["workflow", "agent"],
+    scope="all",
+    min_evidence="corroborated",
+    limit=10,
+)
+for item in page["items"]:
+    print(item["catalogRef"], item["evidence"]["level"])
+
+# Evidence, reviews and dependencies for one entry
+detail = client.catalog.get("workflow", page["items"][0]["id"])
+
+# How to call it: method, path, input/output JSON Schema and code snippets
+contract = client.catalog.contract("workflow", page["items"][0]["id"])
+print(contract["invoke"]["method"], contract["invoke"]["path"])
 ```
 
 ### GPU Model Deployments
@@ -245,17 +296,19 @@ messages = client.conversations.get_messages(conversation.id)
 ```python
 client = SwfteClient(
     api_key="sk-swfte-...",           # Required. Also reads SWFTE_API_KEY env var.
-    base_url="https://api.swfte.com/v2/gateway",  # Default
+    base_url="https://api.swfte.com/agents/v2/gateway",  # Default
     timeout=60,                        # Request timeout in seconds
     max_retries=3,                     # Retry count for failed requests
     workspace_id="ws-...",             # Workspace scoping. Also reads SWFTE_WORKSPACE_ID.
+    # api_base_url="https://api.swfte.com/agents",  # Optional; derived from base_url
 )
 ```
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `api_key` | `str` | `SWFTE_API_KEY` env | Your Swfte API key |
-| `base_url` | `str` | `https://api.swfte.com/v2/gateway` | API base URL |
+| `api_key` | `str` | `SWFTE_API_KEY` env | Your Swfte API key (`sk-swfte-...`) or personal access token (`pat_...`) |
+| `base_url` | `str` | `https://api.swfte.com/agents/v2/gateway` | Gateway URL (chat completions, images, embeddings, audio, models) |
+| `api_base_url` | `str` | `SWFTE_API_BASE_URL` env, else `base_url` minus `/v2/gateway`, `/v1/gateway` or `/gateway` | agents-service root used by agents, workflows, catalog and the other management resources |
 | `timeout` | `int` | `60` | Request timeout (seconds) |
 | `max_retries` | `int` | `3` | Max retry attempts |
 | `workspace_id` | `str` | `SWFTE_WORKSPACE_ID` env | Workspace ID |
@@ -285,8 +338,13 @@ except APIError as e:
 | `SwfteError` | Base exception for all SDK errors |
 | `AuthenticationError` | Invalid or missing API key |
 | `RateLimitError` | Rate limit exceeded (HTTP 429) |
-| `APIError` | General API error with status code |
-| `InvalidRequestError` | Malformed request (HTTP 400) |
+| `APIError` | General API error; `status_code` and parsed `body` are set by `agents.chat`, `workflows.invoke*`, `get_execution_status`, `catalog.*` |
+| `InvalidRequestError` | Malformed request (HTTP 400), or a missing required argument caught before the call |
+| `WorkflowExecutionError` | `invoke_and_wait` / `wait_for_completion`: the run ended FAILED, TIMEOUT or CANCELLED/CANCELED (also a `RuntimeError`) |
+| `WorkflowTimeoutError` | `invoke_and_wait` / `wait_for_completion`: gave up polling; the run is not cancelled (also a `TimeoutError`) |
+
+`agents.chat`, `workflows.invoke*`, `get_execution_status` and `catalog.*` map
+401/403 to `AuthenticationError` and 429 to `RateLimitError`, and are never retried.
 
 ## Supported Providers
 

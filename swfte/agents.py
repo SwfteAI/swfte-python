@@ -2,9 +2,66 @@
 Agent management for the Swfte SDK.
 """
 
+import json
 from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from urllib.parse import quote
 import requests
+
+from .exceptions import InvalidRequestError
+
+#: ``user_id`` used by :meth:`Agents.chat` when none is given. The agents
+#: service keeps one conversation space per (agent, user_id), so every call
+#: that omits ``user_id`` shares this identity. Pass your own end-user id when
+#: several people talk to the same agent through your application.
+DEFAULT_CHAT_USER_ID = "sdk-user"
+
+
+@dataclass
+class AgentChatResponse:
+    """Reply from ``POST /v1/agents/{agent_id}/chat/{user_id}``.
+
+    ``response`` is the agent's reply text. Some agents-service builds return
+    it under ``content``; both are normalised to ``response``. ``raw`` is the
+    full response body.
+    """
+    response: str
+    conversation_id: Optional[str] = None
+    session_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    user_id: Optional[str] = None
+    request_id: Optional[str] = None
+    model: Optional[str] = None
+    provider: Optional[str] = None
+    duration_ms: Optional[int] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    raw: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> "AgentChatResponse":
+        data = data if isinstance(data, dict) else {}
+        reply = data.get("response")
+        if reply is None:
+            reply = data.get("content")
+        if reply is None:
+            reply = ""
+        if not isinstance(reply, str):
+            reply = json.dumps(reply)
+        return cls(
+            response=reply,
+            conversation_id=data.get("conversationId"),
+            session_id=data.get("sessionId"),
+            agent_id=data.get("agentId"),
+            user_id=data.get("userId"),
+            request_id=data.get("requestId"),
+            model=data.get("model"),
+            provider=data.get("provider"),
+            duration_ms=data.get("durationMs"),
+            input_tokens=data.get("inputTokens"),
+            output_tokens=data.get("outputTokens"),
+            raw=data,
+        )
 
 
 @dataclass
@@ -91,6 +148,9 @@ class Agents:
         
         # List all agents
         agents = client.agents.list()
+
+        # Chat with it (reply text is .response)
+        reply = client.agents.chat(agent.id, "Hello!", user_id="user-42")
         
         # Delete an agent
         client.agents.delete(agent.id)
@@ -101,17 +161,12 @@ class Agents:
     
     def _get_base_url(self) -> str:
         """Get the base URL for agent endpoints."""
-        base = self._client.base_url
-        # Remove /gateway if present to get the service root
-        if "/gateway" in base:
-            base = base.replace("/v2/gateway", "").replace("/v1/gateway", "")
+        base = self._client.api_base_url
         return f"{base}/v1/agents"
 
     def _get_v2_base_url(self) -> str:
         """Get the base URL for V2 agent endpoints."""
-        base = self._client.base_url
-        if "/gateway" in base:
-            base = base.replace("/v2/gateway", "").replace("/v1/gateway", "")
+        base = self._client.api_base_url
         return f"{base}/v2/agents"
     
     def _make_request(
@@ -364,9 +419,45 @@ class Agents:
         url = f"{self._get_base_url()}/system"
         return self._make_request("GET", url)
 
+    def chat(
+        self,
+        agent_id: str,
+        message: str,
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+    ) -> AgentChatResponse:
+        """
+        Send one message to an agent and return its reply.
 
+        ``POST {api_base_url}/v1/agents/{agent_id}/chat/{user_id}`` with body
+        ``{"message": ..., "conversationId": ...}``. Runs the agent's full
+        configuration (tools, knowledge, memory) and keeps history per
+        (agent, user_id). Not retried: a retry would send the message twice.
 
+        Args:
+            agent_id: The agent to talk to.
+            message: The user's message.
+            user_id: Conversation owner. Defaults to ``DEFAULT_CHAT_USER_ID`` ("sdk-user").
+            conversation_id: Continue an earlier conversation.
 
+        Returns:
+            AgentChatResponse with ``response`` (reply text) and ``conversation_id``.
 
-
+        Raises:
+            AuthenticationError (401/403), RateLimitError (429), APIError (other non-2xx).
+        """
+        if not agent_id:
+            raise InvalidRequestError("agent_id is required")
+        if not isinstance(message, str) or not message:
+            raise InvalidRequestError("message must be a non-empty string")
+        uid = user_id or DEFAULT_CHAT_USER_ID
+        body: Dict[str, Any] = {"message": message}
+        if conversation_id:
+            body["conversationId"] = conversation_id
+        raw = self._client._api_request(
+            "POST",
+            f"/v1/agents/{quote(agent_id, safe='')}/chat/{quote(uid, safe='')}",
+            json=body,
+        )
+        return AgentChatResponse.from_dict(raw)
 

@@ -88,7 +88,9 @@ strict = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=swfte --cov-report=term-missing --cov-report=xml"
+# Coverage flags live in CI (`pytest --cov=swfte ...`) so a plain `pytest` works
+# without pytest-cov installed.
+addopts = "-v"
 
 [tool.coverage.run]
 source = ["swfte"]

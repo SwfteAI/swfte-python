@@ -40,7 +40,7 @@ class V2Resource:
 
     def _root(self) -> str:
         """Return the agents-service root URL."""
-        return _service_root(self._client.base_url)
+        return self._client.api_base_url
 
     def _url(self, path: str = "") -> str:
         """Build a full URL under this resource's path prefix."""

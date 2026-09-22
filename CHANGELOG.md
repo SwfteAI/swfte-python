@@ -1,5 +1,48 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `agents.chat(agent_id, message, user_id=None, conversation_id=None)` —
+  `POST /v1/agents/{agent_id}/chat/{user_id}` with
+  `{"message": ..., "conversationId": ...}`. Returns `AgentChatResponse` with
+  `.response` (normalised from `content` when the server uses that key),
+  `.conversation_id` and `.raw`. `user_id` defaults to `"sdk-user"`
+  (`DEFAULT_CHAT_USER_ID`).
+- `workflows.invoke(workflow_id, inputs)` — `POST /v2/workflows/{id}/invoke`,
+  runs the published snapshot; returns `WorkflowInvocation(execution_id=...)`.
+- `workflows.invoke_and_wait(workflow_id, inputs, timeout=300, poll_interval=2)`
+  — invokes and polls to a terminal status. Success is any of `SUCCESS`,
+  `SUCCEEDED`, `COMPLETED`; `FAILED`/`TIMEOUT`/`CANCELLED`/`CANCELED` raise
+  `WorkflowExecutionError` (a `RuntimeError`); the client-side deadline raises
+  `WorkflowTimeoutError` (a `TimeoutError`).
+- `catalog.search(...)`, `catalog.get(kind, id)`, `catalog.contract(kind, id)`
+  over `/v2/catalog/*`.
+- `api_base_url` argument (and `SWFTE_API_BASE_URL`) for the agents-service root.
+  Defaults to `base_url` minus its trailing gateway segment — what every
+  management resource already computed; they now all read it from one place.
+- `APIError` carries `status_code` and `body`. The new calls map 401/403 to
+  `AuthenticationError` and 429 to `RateLimitError` and are never retried.
+
+### Changed
+
+- `workflows.get_execution_status()` understands the server's
+  `{"execution": {...}, "nodeExecutions": [...], "progress": n}` shape. It used to
+  read `status` from the top level, where it never is, so every execution looked
+  `PENDING`. `WorkflowExecution` gains `status_raw`, `outcome`, `is_terminal`,
+  `succeeded`, `node_executions` and `raw`; `ExecutionStatus` gains `SUCCESS`,
+  `SUCCEEDED`, `TIMEOUT` and `CANCELED`.
+- `workflows.wait_for_completion()` shares the new terminal rules (it only knew
+  `COMPLETED`, so it timed out on every successful run). Its exceptions subclass
+  the `TimeoutError` / `RuntimeError` it raised before.
+- `pytest` no longer requires `pytest-cov`: the coverage flags moved from
+  `addopts` to CI.
+
+### Fixed
+
+- `test_client_default_base_url` asserted the pre-1.1.1 default URL.
+
 ## 1.1.1 — 2026-09-01
 
 ### Fixed

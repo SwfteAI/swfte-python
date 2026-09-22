@@ -57,8 +57,11 @@ from .exceptions import (
     RateLimitError,
     APIError,
     InvalidRequestError,
+    WorkflowExecutionError,
+    WorkflowTimeoutError,
 )
-from .agents import Agent, Agents
+from .agents import Agent, Agents, AgentChatResponse, DEFAULT_CHAT_USER_ID
+from .catalog import Catalog
 from .deployments import Deployment, DeploymentState, HealthStatus, Deployments
 from .workflows import (
     Workflow,
@@ -68,6 +71,8 @@ from .workflows import (
     ExecutionStatus,
     ValidationResult,
     Workflows,
+    WorkflowInvocation,
+    classify_execution_status,
 )
 
 # Core analytics (backwards compatible import)
@@ -115,10 +120,17 @@ __all__ = [
     "RateLimitError",
     "APIError",
     "InvalidRequestError",
+    "WorkflowExecutionError",
+    "WorkflowTimeoutError",
 
     # Agent management
     "Agent",
     "Agents",
+    "AgentChatResponse",
+    "DEFAULT_CHAT_USER_ID",
+
+    # Catalog
+    "Catalog",
 
     # Deployment management
     "Deployment",
@@ -131,6 +143,8 @@ __all__ = [
     "WorkflowNode",
     "WorkflowEdge",
     "WorkflowExecution",
+    "WorkflowInvocation",
+    "classify_execution_status",
     "ExecutionStatus",
     "ValidationResult",
     "Workflows",

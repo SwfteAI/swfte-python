@@ -120,10 +120,7 @@ class Deployments:
     
     def _get_base_url(self) -> str:
         """Get the base URL for deployment endpoints."""
-        base = self._client.base_url
-        # Remove /gateway if present to get the service root
-        if "/gateway" in base:
-            base = base.replace("/v2/gateway", "").replace("/v1/gateway", "")
+        base = self._client.api_base_url
         return f"{base}/v1/inference"
     
     def _make_request(

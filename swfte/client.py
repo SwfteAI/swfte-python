@@ -3,13 +3,18 @@ Main client class for the Swfte SDK.
 """
 
 import os
-from typing import Optional
+from typing import Any, Dict, Optional
+
+import requests
+
+from ._base import _service_root
 
 from .agent_wizard import AgentWizard
 from .agents import Agents
 from .analytics import Analytics
 from .audio import Audio
 from .audit import Audit
+from .catalog import Catalog
 from .chat import Chat
 from .chatflows import ChatFlows
 from .conversations import Conversations
@@ -18,6 +23,7 @@ from .datasets import Datasets
 from .deployments import Deployments
 from .documents import Documents
 from .embeddings import Embeddings
+from .exceptions import APIError, AuthenticationError, RateLimitError, SwfteError
 from .files import Files
 from .images import Images
 from .marketplace import Marketplace
@@ -37,10 +43,17 @@ class SwfteClient:
 
     Args:
         api_key: Your Swfte API key. If not provided, reads from SWFTE_API_KEY env var.
-        base_url: Base URL for the API. Defaults to https://api.swfte.com/agents/v2/gateway.
+        base_url: Gateway URL (chat completions, images, embeddings, audio, models).
+            Defaults to https://api.swfte.com/agents/v2/gateway.
         timeout: Request timeout in seconds. Defaults to 60.
         max_retries: Maximum number of retries for failed requests. Defaults to 3.
         workspace_id: Workspace to scope requests to. Reads from SWFTE_WORKSPACE_ID.
+        api_base_url: Root of the agents-service API, where agent chat
+            (``/v1/agents/...``), workflow invoke (``/v2/workflows/...``), the
+            catalog (``/v2/catalog/...``) and the other management resources live.
+            Defaults to SWFTE_API_BASE_URL, else ``base_url`` with its trailing
+            ``/v2/gateway``, ``/v1/gateway`` or ``/gateway`` removed
+            (https://api.swfte.com/agents by default).
 
     Example:
         client = SwfteClient(api_key="sk-swfte-...")
@@ -59,6 +72,7 @@ class SwfteClient:
         timeout: int = 60,
         max_retries: int = 3,
         workspace_id: Optional[str] = None,
+        api_base_url: Optional[str] = None,
     ):
         self.api_key = api_key or os.environ.get("SWFTE_API_KEY")
         if not self.api_key:
@@ -67,6 +81,10 @@ class SwfteClient:
             )
 
         self.base_url = base_url.rstrip("/")
+        explicit_api_base = api_base_url or os.environ.get("SWFTE_API_BASE_URL")
+        self.api_base_url = (
+            explicit_api_base.rstrip("/") if explicit_api_base else _service_root(self.base_url)
+        )
         self.timeout = timeout
         self.max_retries = max_retries
         self.workspace_id = workspace_id or os.environ.get("SWFTE_WORKSPACE_ID")
@@ -97,6 +115,7 @@ class SwfteClient:
         self._audit = None
         self._cost_control = None
         self._agent_wizard = None
+        self._catalog = None
 
     # ---- existing resources -------------------------------------------------
 
@@ -263,6 +282,13 @@ class SwfteClient:
             self._agent_wizard = AgentWizard(self)
         return self._agent_wizard
 
+    @property
+    def catalog(self) -> Catalog:
+        """Catalog — search proven artifacts, read their evidence and invoke contract."""
+        if self._catalog is None:
+            self._catalog = Catalog(self)
+        return self._catalog
+
     # ---- request plumbing --------------------------------------------------
 
     def _get_headers(self) -> dict:
@@ -276,3 +302,60 @@ class SwfteClient:
             headers["X-Workspace-ID"] = self.workspace_id
             headers["x-workspace-id"] = self.workspace_id
         return headers
+
+    def _api_request(
+        self,
+        method: str,
+        path: str,
+        json: Any = None,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """One request against the agents-service API (``api_base_url``).
+
+        Never retried: it backs non-idempotent calls such as agent chat and
+        workflow invoke, where a silent retry could run (and bill) twice.
+        Errors are typed: 401/403 -> AuthenticationError, 429 -> RateLimitError,
+        any other non-2xx -> APIError (``status_code``, ``body``). Returns the
+        parsed JSON body, or ``None`` for an empty body.
+        """
+        clean_params = None
+        if params:
+            clean_params = {}
+            for key, value in params.items():
+                if value is None or value == "":
+                    continue
+                if isinstance(value, (list, tuple)):
+                    value = ",".join(str(v) for v in value)
+                clean_params[key] = value
+            clean_params = clean_params or None
+
+        try:
+            response = requests.request(
+                method=method,
+                url=f"{self.api_base_url}{path}",
+                headers=self._get_headers(),
+                json=json,
+                params=clean_params,
+                timeout=self.timeout,
+            )
+        except requests.Timeout as exc:
+            raise SwfteError(f"Request timed out: {method} {path}") from exc
+
+        text = response.text or ""
+        body: Any = None
+        if text:
+            try:
+                body = response.json()
+            except ValueError:
+                body = text
+
+        status = response.status_code
+        if status < 200 or status >= 300:
+            message = f"API error: {status} {method} {path}" + (f" - {text}" if text else "")
+            if status in (401, 403):
+                raise AuthenticationError(message)
+            if status == 429:
+                raise RateLimitError(message)
+            raise APIError(message, status_code=status, body=body)
+        return body
+
