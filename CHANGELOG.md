@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Fixed
+
+- `workflows.invoke_and_wait` / `wait_for_completion` no longer burn the whole
+  timeout on a human-in-the-loop run: `PAUSED` / `WAITING_FOR_INPUT` (see
+  `PAUSED_STATUSES`) return at once with `execution.paused` True and
+  `execution.waiting_for` (the gate node from `nodeExecutions`);
+  `raise_on_pause=True` raises `WorkflowPausedError` instead.
+  `classify_execution_status` gains `"paused"`.
+- README: the package is `swfte-sdk` (`pip install swfte-sdk`), imported as `swfte`.
+
 ### Added
 
 - `agents.chat(agent_id, message, user_id=None, conversation_id=None)` —

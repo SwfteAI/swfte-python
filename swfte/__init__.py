@@ -59,6 +59,7 @@ from .exceptions import (
     InvalidRequestError,
     WorkflowExecutionError,
     WorkflowTimeoutError,
+    WorkflowPausedError,
 )
 from .agents import Agent, Agents, AgentChatResponse, DEFAULT_CHAT_USER_ID
 from .catalog import Catalog
@@ -122,6 +123,7 @@ __all__ = [
     "InvalidRequestError",
     "WorkflowExecutionError",
     "WorkflowTimeoutError",
+    "WorkflowPausedError",
 
     # Agent management
     "Agent",

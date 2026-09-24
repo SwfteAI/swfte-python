@@ -21,7 +21,7 @@ from swfte.exceptions import (
     WorkflowExecutionError,
     WorkflowTimeoutError,
 )
-from swfte.workflows import classify_execution_status
+from swfte.workflows import ExecutionStatus, classify_execution_status
 
 API = "https://api.swfte.com/agents"
 
@@ -184,7 +184,7 @@ class TestWorkflowInvoke:
             assert classify_execution_status(s) == "failed"
         for s in ("CANCELLED", "CANCELED"):
             assert classify_execution_status(s) == "cancelled"
-        for s in ("PENDING", "RUNNING", "PAUSED", "", None):
+        for s in ("PENDING", "RUNNING", "", None):
             assert classify_execution_status(s) == "running"
 
     def test_invoke_and_wait_until_succeeded(self, client):
@@ -311,3 +311,62 @@ class TestCatalog:
             with pytest.raises(APIError) as ei:
                 client.catalog.get("workflow", "nope")
         assert ei.value.status_code == 404
+
+
+# -- battle-test regressions (BATTLE_TEST.md N5) ------------------------------
+
+
+class TestPausedRunsReturnEarly:
+    """BT-N5: a human-in-the-loop run is handed back as paused, not polled until the timeout."""
+
+    def test_paused_and_waiting_for_input_classify_as_paused(self):
+        from swfte.workflows import PAUSED_STATUSES
+
+        for s in ("PAUSED", "WAITING_FOR_INPUT", "AWAITING_HUMAN", "awaiting_input", "WAITING"):
+            assert classify_execution_status(s) == "paused"
+        assert "WAITING_FOR_INPUT" in PAUSED_STATUSES
+
+    def test_invoke_and_wait_returns_promptly_with_waiting_for_input(self, client):
+        paused = status_body("WAITING_FOR_INPUT")
+        paused["nodeExecutions"] = [
+            {"nodeId": "start", "nodeType": "START", "status": "SUCCEEDED"},
+            {"nodeId": "approve_1", "nodeType": "HUMAN_INPUT", "status": "PAUSED", "pauseReason": "HumanInputRequired"},
+        ]
+        responses = [resp({"executionId": "ex_1"}, 202), resp(status_body("RUNNING")), resp(paused)]
+        started = time.monotonic()
+        with patch("requests.request", side_effect=responses) as m:
+            res = client.workflows.invoke_and_wait("wf_1", timeout=300, poll_interval=0.001)
+        assert time.monotonic() - started < 2
+        assert m.call_count == 3
+        assert res.paused is True
+        assert res.outcome == "paused"
+        assert res.status_raw == "WAITING_FOR_INPUT"
+        assert res.id == "ex_1"
+        assert res.waiting_for == [
+            {"node_id": "approve_1", "node_type": "HUMAN_INPUT", "status": "PAUSED", "reason": "HumanInputRequired"}
+        ]
+        assert res.is_terminal is False
+
+    def test_backend_spelling_paused_and_success_not_paused(self, client):
+        with patch("requests.request", side_effect=[resp({"executionId": "ex_1"}, 202), resp(status_body("PAUSED"))]):
+            res = client.workflows.invoke_and_wait("wf_1", poll_interval=0.001)
+        assert res.paused is True
+        assert res.status == ExecutionStatus.PAUSED
+        assert res.waiting_for == []
+        with patch("requests.request", side_effect=[resp({"executionId": "ex_2"}, 202), resp(status_body("SUCCEEDED"))]):
+            ok = client.workflows.invoke_and_wait("wf_1", poll_interval=0.001)
+        assert ok.paused is False
+
+    def test_raise_on_pause(self, client):
+        from swfte.exceptions import WorkflowPausedError
+
+        with patch("requests.request", side_effect=[resp({"executionId": "ex_1"}, 202), resp(status_body("WAITING_FOR_INPUT"))]):
+            with pytest.raises(WorkflowPausedError) as ei:
+                client.workflows.invoke_and_wait("wf_1", poll_interval=0.001, raise_on_pause=True)
+        assert ei.value.execution_id == "ex_1"
+        assert ei.value.status == "WAITING_FOR_INPUT"
+
+    def test_wait_for_completion_returns_early_on_pause(self, client):
+        with patch("requests.request", side_effect=[resp(status_body("PAUSED"))]):
+            res = client.workflows.wait_for_completion("ex_1", timeout=300, poll_interval=0.001)
+        assert res.paused is True

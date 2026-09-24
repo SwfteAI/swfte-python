@@ -14,6 +14,7 @@ from .exceptions import (
     APIError,
     InvalidRequestError,
     WorkflowExecutionError,
+    WorkflowPausedError,
     WorkflowTimeoutError,
 )
 
@@ -42,10 +43,14 @@ SUCCESS_STATUSES = frozenset({"SUCCESS", "SUCCEEDED", "COMPLETED"})
 FAILURE_STATUSES = frozenset({"FAILED", "ERROR", "TIMEOUT", "TIMED_OUT"})
 #: Statuses meaning the run was cancelled (both spellings).
 CANCELLED_STATUSES = frozenset({"CANCELLED", "CANCELED"})
+#: Statuses meaning the run is waiting for a person (a HUMAN_INPUT gate) or an external
+#: event. agents-service reports ``PAUSED``; other surfaces say ``WAITING_FOR_INPUT``.
+#: Not terminal, but polling will not move it on by itself (BT-N5).
+PAUSED_STATUSES = frozenset({"PAUSED", "WAITING_FOR_INPUT", "WAITING", "AWAITING_INPUT", "AWAITING_HUMAN", "AWAITING_APPROVAL"})
 
 
 def classify_execution_status(status: Optional[str]) -> str:
-    """Return ``"succeeded"``, ``"failed"``, ``"cancelled"`` or ``"running"``
+    """Return ``"succeeded"``, ``"failed"``, ``"cancelled"``, ``"paused"`` or ``"running"``
     for a raw status string (case-insensitive; unknown or missing -> running)."""
     s = (status or "").upper()
     if s in SUCCESS_STATUSES:
@@ -54,6 +59,8 @@ def classify_execution_status(status: Optional[str]) -> str:
         return "failed"
     if s in CANCELLED_STATUSES:
         return "cancelled"
+    if s in PAUSED_STATUSES:
+        return "paused"
     return "running"
 
 
@@ -201,12 +208,42 @@ class WorkflowExecution:
 
     @property
     def outcome(self) -> str:
-        """``"succeeded"``, ``"failed"``, ``"cancelled"`` or ``"running"``."""
+        """``"succeeded"``, ``"failed"``, ``"cancelled"``, ``"paused"`` or ``"running"``."""
         return classify_execution_status(self.status_raw or self.status.value)
 
     @property
     def is_terminal(self) -> bool:
-        return self.outcome != "running"
+        return self.outcome not in ("running", "paused")
+
+    @property
+    def paused(self) -> bool:
+        """True when the run stopped to wait for input (see :attr:`waiting_for`); resume it, then poll again."""
+        return self.outcome == "paused"
+
+    @property
+    def waiting_for(self) -> List[Dict[str, Any]]:
+        """The node(s) a paused run waits on (typically a HUMAN_INPUT gate), from ``nodeExecutions``."""
+        out: List[Dict[str, Any]] = []
+        for n in self.node_executions or []:
+            if not isinstance(n, dict):
+                continue
+            st = str(n.get("status") or "").upper()
+            output_data = n.get("outputData") if isinstance(n.get("outputData"), dict) else {}
+            reason = n.get("pauseReason") or output_data.get("pauseReason")
+            if st not in PAUSED_STATUSES and not reason:
+                continue
+            node_id = n.get("nodeId", n.get("id"))
+            if node_id is None:
+                continue
+            item: Dict[str, Any] = {"node_id": str(node_id)}
+            node_type = n.get("nodeType") or n.get("type")
+            if node_type:
+                item["node_type"] = str(node_type)
+            item["status"] = st or "PAUSED"
+            if reason:
+                item["reason"] = str(reason)
+            out.append(item)
+        return out
 
     @property
     def succeeded(self) -> bool:
@@ -636,9 +673,15 @@ class Workflows:
         inputs: Optional[Dict[str, Any]] = None,
         timeout: float = 300,
         poll_interval: float = 2,
+        raise_on_pause: bool = False,
     ) -> WorkflowExecution:
         """
         Invoke the published workflow and poll until the run reaches a terminal status.
+
+        A run that stops for human input (``PAUSED``, ``WAITING_FOR_INPUT``, …) is
+        returned at once with ``paused`` True and ``waiting_for`` naming the gate,
+        instead of being polled until ``timeout`` — or raises
+        :class:`~swfte.exceptions.WorkflowPausedError` with ``raise_on_pause=True``.
 
         Args:
             workflow_id: The workflow to run.
@@ -647,7 +690,8 @@ class Workflows:
             poll_interval: Seconds between status polls.
 
         Returns:
-            The final execution when it succeeded (``SUCCESS``, ``SUCCEEDED`` or ``COMPLETED``).
+            The final execution when it succeeded (``SUCCESS``, ``SUCCEEDED`` or ``COMPLETED``),
+            or the paused execution (``.paused`` True) when it waits for input.
 
         Raises:
             WorkflowExecutionError: the run ended FAILED/TIMEOUT or CANCELLED/CANCELED
@@ -656,10 +700,10 @@ class Workflows:
                 ``.execution_id`` can still be polled. Also a ``TimeoutError``.
         """
         invocation = self.invoke(workflow_id, inputs)
-        return self._poll_until_terminal(invocation.execution_id, timeout, poll_interval)
+        return self._poll_until_terminal(invocation.execution_id, timeout, poll_interval, raise_on_pause)
 
     def _poll_until_terminal(
-        self, execution_id: str, timeout: float, poll_interval: float
+        self, execution_id: str, timeout: float, poll_interval: float, raise_on_pause: bool = False
     ) -> WorkflowExecution:
         deadline = time.monotonic() + max(0.0, timeout)
         interval = max(0.0, poll_interval)
@@ -668,6 +712,15 @@ class Workflows:
             outcome = execution.outcome
             status = execution.status_raw or execution.status.value
             if outcome == "succeeded":
+                return execution
+            if outcome == "paused":
+                # BT-N5: a human-in-the-loop run will not finish by being polled; hand it back now.
+                if raise_on_pause:
+                    where = ", ".join(n["node_id"] for n in execution.waiting_for)
+                    raise WorkflowPausedError(
+                        f"Execution {execution_id} is waiting for input ({status}{' at ' + where if where else ''})",
+                        execution_id, status, execution.waiting_for, execution,
+                    )
                 return execution
             if outcome == "failed":
                 detail = f": {execution.error}" if execution.error else ""
@@ -738,6 +791,7 @@ class Workflows:
         execution_id: str,
         timeout: int = 300,
         poll_interval: int = 5,
+        raise_on_pause: bool = False,
     ) -> WorkflowExecution:
         """
         Wait for an existing execution (from :meth:`execute` or :meth:`invoke`) to finish.
@@ -756,7 +810,7 @@ class Workflows:
             WorkflowTimeoutError (a ``TimeoutError``): execution didn't finish within timeout.
             WorkflowExecutionError (a ``RuntimeError``): execution failed or was cancelled.
         """
-        return self._poll_until_terminal(execution_id, timeout, poll_interval)
+        return self._poll_until_terminal(execution_id, timeout, poll_interval, raise_on_pause)
 
     def clone(
         self,

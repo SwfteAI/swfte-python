@@ -52,6 +52,21 @@ class WorkflowExecutionError(SwfteError, RuntimeError):
         self.execution = execution
 
 
+class WorkflowPausedError(SwfteError):
+    """A workflow run stopped to wait for a person (HUMAN_INPUT gate) or an external
+    event. Raised only with ``raise_on_pause=True``; by default ``invoke_and_wait``
+    returns the execution with ``paused`` True. The run has not failed: resume it
+    (Studio, or ``workflows.resume_execution``) and poll ``execution_id`` again.
+    """
+
+    def __init__(self, message: str, execution_id: str, status: str, waiting_for: Any = None, execution: Any = None):
+        super().__init__(message)
+        self.execution_id = execution_id
+        self.status = status
+        self.waiting_for = waiting_for or []
+        self.execution = execution
+
+
 class WorkflowTimeoutError(SwfteError, TimeoutError):
     """Polling gave up before the workflow run finished. The run is NOT
     cancelled; poll ``execution_id`` again to follow it.

@@ -37,7 +37,7 @@ Full API reference and guides are available at [swfte.com/developers](https://ww
 ## Installation
 
 ```bash
-pip install swfte
+pip install swfte-sdk   # the package is swfte-sdk; you import it as `swfte`
 ```
 
 ## Quick Start
