@@ -63,9 +63,12 @@ class V2Resource:
         params: Optional[Dict[str, Any]] = None,
         files: Optional[Dict[str, Any]] = None,
         stream: bool = False,
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> Any:
         """Perform an HTTP request and return parsed JSON (or raw response if streaming)."""
         headers = self._client._get_headers()
+        if extra_headers:
+            headers.update(extra_headers)
         if files is not None:
             # let requests build the multipart boundary
             headers.pop("Content-Type", None)

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from urllib.parse import quote
 import requests
 
+from ._callsite import callsite_headers, resolve_callsite
 from .exceptions import InvalidRequestError
 
 #: ``user_id`` used by :meth:`Agents.chat` when none is given. The agents
@@ -425,6 +426,8 @@ class Agents:
         message: str,
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
+        *,
+        callsite: Optional[str] = None,
     ) -> AgentChatResponse:
         """
         Send one message to an agent and return its reply.
@@ -439,6 +442,8 @@ class Agents:
             message: The user's message.
             user_id: Conversation owner. Defaults to ``DEFAULT_CHAT_USER_ID`` ("sdk-user").
             conversation_id: Continue an earlier conversation.
+            callsite: Optional ``cs_<24 hex>`` id sent as ``X-Swfte-Callsite``
+                (see README, "Call-site attribution"). Invalid ids are never sent.
 
         Returns:
             AgentChatResponse with ``response`` (reply text) and ``conversation_id``.
@@ -446,6 +451,7 @@ class Agents:
         Raises:
             AuthenticationError (401/403), RateLimitError (429), APIError (other non-2xx).
         """
+        extra = callsite_headers(resolve_callsite(callsite))
         if not agent_id:
             raise InvalidRequestError("agent_id is required")
         if not isinstance(message, str) or not message:
@@ -458,6 +464,7 @@ class Agents:
             "POST",
             f"/v1/agents/{quote(agent_id, safe='')}/chat/{quote(uid, safe='')}",
             json=body,
+            extra_headers=extra,
         )
         return AgentChatResponse.from_dict(raw)
 

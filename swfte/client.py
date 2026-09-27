@@ -309,6 +309,7 @@ class SwfteClient:
         path: str,
         json: Any = None,
         params: Optional[Dict[str, Any]] = None,
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> Any:
         """One request against the agents-service API (``api_base_url``).
 
@@ -329,11 +330,15 @@ class SwfteClient:
                 clean_params[key] = value
             clean_params = clean_params or None
 
+        headers = self._get_headers()
+        if extra_headers:
+            headers.update(extra_headers)
+
         try:
             response = requests.request(
                 method=method,
                 url=f"{self.api_base_url}{path}",
-                headers=self._get_headers(),
+                headers=headers,
                 json=json,
                 params=clean_params,
                 timeout=self.timeout,

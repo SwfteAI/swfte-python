@@ -9,6 +9,7 @@ delivery. See https://www.swfte.com/products/chatflows for product details.
 from typing import Any, Dict, List, Optional
 
 from ._base import V2Resource
+from ._callsite import callsite_headers, resolve_callsite
 
 
 class ChatFlows(V2Resource):
@@ -66,12 +67,21 @@ class ChatFlows(V2Resource):
         chatflow_id: str,
         channel: str = "WEB",
         context: Optional[Dict[str, Any]] = None,
+        *,
+        callsite: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Start a new chatflow session."""
+        """Start a new chatflow session.
+
+        ``callsite``: optional ``cs_<24 hex>`` id sent as ``X-Swfte-Callsite``
+        (see README, "Call-site attribution").
+        """
+        extra = callsite_headers(resolve_callsite(callsite))
         body: Dict[str, Any] = {"channel": channel}
         if context:
             body["context"] = context
-        return self._request("POST", self._url(f"/{chatflow_id}/sessions"), data=body)
+        return self._request(
+            "POST", self._url(f"/{chatflow_id}/sessions"), data=body, extra_headers=extra
+        )
 
     def list_sessions(
         self,
@@ -128,9 +138,17 @@ class ChatFlows(V2Resource):
         """Preview a draft definition without persisting."""
         return self._request("POST", self._url("/builder/preview"), data=draft)
 
-    def test(self, chatflow_id: str, input: Dict[str, Any]) -> Dict[str, Any]:
-        """Test a chatflow with a synthetic input payload."""
-        return self._request("POST", self._url(f"/builder/{chatflow_id}/test"), data=input)
+    def test(
+        self, chatflow_id: str, input: Dict[str, Any], *, callsite: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Test a chatflow with a synthetic input payload.
+
+        ``callsite``: optional ``cs_<24 hex>`` id sent as ``X-Swfte-Callsite``.
+        """
+        extra = callsite_headers(resolve_callsite(callsite))
+        return self._request(
+            "POST", self._url(f"/builder/{chatflow_id}/test"), data=input, extra_headers=extra
+        )
 
     def export(self, chatflow_id: str) -> Dict[str, Any]:
         """Export a chatflow as JSON."""

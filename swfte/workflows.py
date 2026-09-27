@@ -10,6 +10,7 @@ from urllib.parse import quote
 import requests
 import time
 
+from ._callsite import callsite_headers, resolve_callsite
 from .exceptions import (
     APIError,
     InvalidRequestError,
@@ -377,10 +378,13 @@ class Workflows:
         url: str,
         data: Optional[Dict] = None,
         params: Optional[Dict] = None,
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> Dict:
         """Make an HTTP request."""
         headers = self._client._get_headers()
-        
+        if extra_headers:
+            headers.update(extra_headers)
+
         response = requests.request(
             method=method,
             url=url,
@@ -595,6 +599,8 @@ class Workflows:
         workflow_id: str,
         inputs: Optional[Dict] = None,
         skip_validation: bool = False,
+        *,
+        callsite: Optional[str] = None,
     ) -> WorkflowExecution:
         """
         Run the workflow's CURRENT (editable/draft) definition — Studio's test path.
@@ -608,16 +614,27 @@ class Workflows:
             workflow_id: The ID of the workflow to execute.
             inputs: Input data for the workflow.
             skip_validation: Skip validation before execution.
-        
+            callsite: Optional ``cs_<24 hex>`` id sent as ``X-Swfte-Callsite``
+                (see README, "Call-site attribution"). Invalid ids are never sent.
+
         Returns:
             The workflow execution.
         """
+        extra = callsite_headers(resolve_callsite(callsite))
         url = f"{self._get_base_url()}/{workflow_id}/execute"
         params = {"skipValidation": skip_validation} if skip_validation else None
-        response = self._make_request("POST", url, data=inputs or {}, params=params)
+        response = self._make_request(
+            "POST", url, data=inputs or {}, params=params, extra_headers=extra
+        )
         return WorkflowExecution.from_dict(response)
-    
-    def invoke(self, workflow_id: str, inputs: Optional[Dict[str, Any]] = None) -> WorkflowInvocation:
+
+    def invoke(
+        self,
+        workflow_id: str,
+        inputs: Optional[Dict[str, Any]] = None,
+        *,
+        callsite: Optional[str] = None,
+    ) -> WorkflowInvocation:
         """
         Run the workflow's PUBLISHED snapshot — the production path.
 
@@ -627,15 +644,24 @@ class Workflows:
         raised as ``APIError`` with ``status_code == 409``. ``testingFlag`` is
         rejected (400). Not retried: a retry could start the run twice.
 
+        ``callsite``: optional ``cs_<24 hex>`` id sent as ``X-Swfte-Callsite``
+        (see README, "Call-site attribution"). Invalid ids are never sent.
+
         Returns:
             WorkflowInvocation with ``execution_id``.
         """
+        return self._invoke(workflow_id, inputs, resolve_callsite(callsite))
+
+    def _invoke(
+        self, workflow_id: str, inputs: Optional[Dict[str, Any]], callsite: Optional[str]
+    ) -> WorkflowInvocation:
         if not workflow_id:
             raise InvalidRequestError("workflow_id is required")
         res = self._client._api_request(
             "POST",
             f"/v2/workflows/{quote(workflow_id, safe='')}/invoke",
             json=inputs or {},
+            extra_headers=callsite_headers(callsite),
         )
         if not isinstance(res, dict) or not res.get("executionId"):
             raise APIError("Invoke response did not include an executionId", status_code=502, body=res)
@@ -674,6 +700,8 @@ class Workflows:
         timeout: float = 300,
         poll_interval: float = 2,
         raise_on_pause: bool = False,
+        *,
+        callsite: Optional[str] = None,
     ) -> WorkflowExecution:
         """
         Invoke the published workflow and poll until the run reaches a terminal status.
@@ -688,6 +716,8 @@ class Workflows:
             inputs: Workflow inputs.
             timeout: Give up after this many seconds (client side; the run keeps going).
             poll_interval: Seconds between status polls.
+            callsite: Optional ``cs_<24 hex>`` id sent as ``X-Swfte-Callsite`` on the
+                invoke request (status polls carry no call-site header).
 
         Returns:
             The final execution when it succeeded (``SUCCESS``, ``SUCCEEDED`` or ``COMPLETED``),
@@ -699,7 +729,7 @@ class Workflows:
             WorkflowTimeoutError: ``timeout`` elapsed first; the run is not cancelled and
                 ``.execution_id`` can still be polled. Also a ``TimeoutError``.
         """
-        invocation = self.invoke(workflow_id, inputs)
+        invocation = self._invoke(workflow_id, inputs, resolve_callsite(callsite))
         return self._poll_until_terminal(invocation.execution_id, timeout, poll_interval, raise_on_pause)
 
     def _poll_until_terminal(

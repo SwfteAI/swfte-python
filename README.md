@@ -291,6 +291,30 @@ client.conversations.add_message(conversation.id, role="assistant", content="Hi 
 messages = client.conversations.get_messages(conversation.id)
 ```
 
+### Call-site attribution
+
+The Swfte code map can attribute each run to the line of your code that started it. The methods
+that invoke an artifact (`workflows.invoke`, `workflows.invoke_and_wait`, `workflows.execute`,
+`agents.chat`, `chatflows.start_session`, `chatflows.test`) take an optional keyword-only
+`callsite` and send it as the `X-Swfte-Callsite` header:
+
+```python
+client.workflows.invoke(workflow_id, {"order": 42}, callsite="cs_0123456789abcdef01234567")
+```
+
+`swfte scan --tag` inserts these ids for you. **By default no header is sent.** The rules:
+
+- An explicit `callsite` always wins. It must match `cs_` plus 24 lowercase hex characters;
+  anything else is never sent (the call still runs, unattributed).
+- Without an explicit id, `SWFTE_CALLSITE_STACK=1` turns on stack capture for dev and staging:
+  the SDK finds the first stack frame outside the `swfte` package and looks up its
+  `path:line` (relative to the map's `root`) in the local caller map written by `swfte scan`,
+  read from `SWFTE_CODEMAP_CALLERS` or else `<cwd>/.swfte/codemap/callers.json`. No entry, no
+  map, or an unreadable map sends nothing. The map never leaves your machine; only the id does.
+- Stack capture is refused in production (`SWFTE_ENV`, `ENV` or `PYTHON_ENV` equal to
+  `production`) with one `RuntimeWarning`; explicit ids are still sent there.
+- Status polls made by `invoke_and_wait` carry no call-site header.
+
 ## Configuration
 
 ```python
