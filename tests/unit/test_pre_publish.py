@@ -4,7 +4,7 @@ import json
 import threading
 import time
 import warnings
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 import requests
@@ -44,7 +44,7 @@ class _Server:
             def log_message(self, *a):
                 pass
 
-        self.httpd = HTTPServer(("127.0.0.1", 0), H)
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), H)
         self.url = f"http://127.0.0.1:{self.httpd.server_port}"
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
 
