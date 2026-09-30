@@ -3,11 +3,14 @@ Main client class for the Swfte SDK.
 """
 
 import os
+import warnings
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 import requests
 
 from ._base import _service_root
+from ._version import __version__
 
 from .agent_wizard import AgentWizard
 from .agents import Agents
@@ -34,6 +37,21 @@ from .rag import Rag
 from .secrets import Secrets
 from .voice_calls import VoiceCalls
 from .workflows import Workflows
+
+
+_LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def _warn_if_insecure(url: str, what: str) -> None:
+    """Warn when the Bearer key would travel over cleartext http:// to a non-loopback host."""
+    parsed = urlparse(url)
+    if parsed.scheme == "http" and (parsed.hostname or "") not in _LOOPBACK_HOSTS:
+        warnings.warn(
+            f"{what} uses http:// ({parsed.hostname}); your API key is sent in cleartext. "
+            "Use https:// (http:// is only safe for localhost).",
+            UserWarning,
+            stacklevel=3,
+        )
 
 
 class SwfteClient:
@@ -85,6 +103,8 @@ class SwfteClient:
         self.api_base_url = (
             explicit_api_base.rstrip("/") if explicit_api_base else _service_root(self.base_url)
         )
+        _warn_if_insecure(self.base_url, "base_url")
+        _warn_if_insecure(self.api_base_url, "api_base_url")
         self.timeout = timeout
         self.max_retries = max_retries
         self.workspace_id = workspace_id or os.environ.get("SWFTE_WORKSPACE_ID")
@@ -296,7 +316,7 @@ class SwfteClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "swfte-python/1.1.0",
+            "User-Agent": f"swfte-python/{__version__}",
         }
         if self.workspace_id:
             headers["X-Workspace-ID"] = self.workspace_id

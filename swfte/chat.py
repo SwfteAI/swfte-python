@@ -88,7 +88,11 @@ class Completions:
     
     def _send_request(self, url: str, payload: dict, headers: dict) -> ChatCompletion:
         """Send a non-streaming request."""
-        for attempt in range(self.client.max_retries):
+        # Only failures that happen before the request reaches the server are
+        # retried (connect errors). A read timeout is NOT retried: the server
+        # may already be processing (and billing) the call.
+        attempts = max(1, self.client.max_retries)
+        for attempt in range(attempts):
             try:
                 response = requests.post(
                     url,
@@ -96,24 +100,29 @@ class Completions:
                     headers=headers,
                     timeout=self.client.timeout,
                 )
-                
-                if response.status_code == 401:
-                    raise AuthenticationError("Invalid API key")
+
+                if response.status_code in (401, 403):
+                    raise AuthenticationError("Invalid API key" if response.status_code == 401 else "Forbidden")
                 elif response.status_code == 429:
                     raise RateLimitError("Rate limit exceeded")
                 elif response.status_code >= 400:
-                    raise APIError(f"API error: {response.status_code} - {response.text}")
-                
+                    raise APIError(
+                        f"API error: {response.status_code} - {response.text}",
+                        status_code=response.status_code,
+                    )
+
                 data = response.json()
                 return ChatCompletion.from_dict(data)
-                
-            except requests.exceptions.Timeout:
-                if attempt == self.client.max_retries - 1:
-                    raise APIError("Request timed out")
+
+            except requests.exceptions.ConnectionError as e:
+                if attempt == attempts - 1:
+                    raise APIError(f"Request failed: {str(e)}") from e
+            except requests.exceptions.Timeout as e:
+                raise APIError("Request timed out") from e
             except requests.exceptions.RequestException as e:
-                if attempt == self.client.max_retries - 1:
-                    raise APIError(f"Request failed: {str(e)}")
-    
+                raise APIError(f"Request failed: {str(e)}") from e
+        raise APIError("Request failed")  # pragma: no cover
+
     def _stream_response(self, url: str, payload: dict, headers: dict) -> Iterator[ChatCompletionChunk]:
         """Stream the response."""
         # Use the dedicated streaming endpoint
@@ -127,12 +136,12 @@ class Completions:
             stream=True,
         )
         
-        if response.status_code == 401:
+        if response.status_code in (401, 403):
             raise AuthenticationError("Invalid API key")
         elif response.status_code == 429:
             raise RateLimitError("Rate limit exceeded")
         elif response.status_code >= 400:
-            raise APIError(f"API error: {response.status_code}")
+            raise APIError(f"API error: {response.status_code}", status_code=response.status_code)
         
         for line in response.iter_lines():
             if line:

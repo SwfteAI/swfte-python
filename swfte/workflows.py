@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from urllib.parse import quote
 import requests
+
+from ._base import _raise_for_status
 import time
 
 from .exceptions import (
@@ -390,7 +392,7 @@ class Workflows:
             timeout=self._client.timeout,
         )
         
-        response.raise_for_status()
+        _raise_for_status(response, method, url)
         
         if response.content:
             return response.json()

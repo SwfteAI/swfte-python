@@ -1,6 +1,38 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 - 2026-09-30
+
+First release published to PyPI (`pip install swfte-sdk`; import name `swfte`).
+Versions 1.0.x and 1.1.x were never published; 1.2.0 supersedes them.
+
+### Security
+
+- Release workflow publishes with PyPI Trusted Publishing (OIDC) and no longer
+  uses a `PYPI_API_TOKEN` secret; every GitHub Action is pinned to a full commit
+  SHA; the GitHub Release step runs in its own job; publishing only runs from `main`.
+- `requests>=2.32.4` (the old `>=2.28.0` floor allowed versions with known CVEs,
+  e.g. the netrc credential leak fixed in 2.32.4).
+- `http://` base URLs to non-loopback hosts now emit a `UserWarning`.
+
+### Fixed
+
+- README badge and links pointed at the unregistered PyPI name `swfte`; they now
+  point at `swfte-sdk`.
+- Removed the syntactically invalid `swfte/analytics.py` that shipped in the wheel
+  and sdist (shadowed by the `swfte/analytics/` package, which is unchanged).
+- `chat.completions.create` no longer retries read timeouts (a retry could run and
+  bill the call more than once); only connection failures are retried, 403 is an
+  `AuthenticationError`, and `max_retries=0` makes one attempt instead of
+  silently returning `None`.
+- All V2 management resources raise `AuthenticationError` for 401/403 and
+  `RateLimitError` for 429 (they raised a bare `requests.HTTPError`); other
+  status codes still raise `requests.HTTPError`.
+- `agents.chat` reads the reply from `content` first, then `response` (the server
+  returns `content`).
+- `User-Agent` and `swfte.__version__` now report the real package version.
+- `py.typed` is now shipped, matching the `Typing :: Typed` classifier.
+
+### Carried over from the 1.1.x development line (also in 1.2.0)
 
 ### Fixed
 

@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 import requests
 
+from ._base import _raise_for_status
+
 
 @dataclass
 class Message:
@@ -151,7 +153,7 @@ class Conversations:
             timeout=self._client.timeout,
         )
 
-        response.raise_for_status()
+        _raise_for_status(response, method, url)
 
         if response.content:
             return response.json()
