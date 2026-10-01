@@ -12,7 +12,7 @@ from swfte import SwfteClient
 from swfte.exceptions import APIError
 
 
-CASES = ["chat", "stream", "transcription", "speech", "file", "workflow",
+CASES = ["chat", "stream", "transcription", "speech", "file", "workflow", "workflow_execute",
          "image", "image_edit", "embedding"]
 AUDIO = b"\x00\xff\x10audio"
 MESSAGE = "hello caf\u00e9"
@@ -98,6 +98,8 @@ def invoke(case, sdk):
         return sdk.files.upload(("fixture.bin", AUDIO, "application/octet-stream"))
     if case == "workflow":
         return sdk.workflows.invoke("wf-post", {"input": MESSAGE})
+    if case == "workflow_execute":
+        return sdk.workflows.execute("wf-post", {"input": MESSAGE})
     if case == "image":
         return sdk.images.generate(model="m", prompt=MESSAGE)
     if case == "image_edit":

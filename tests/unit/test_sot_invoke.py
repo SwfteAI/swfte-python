@@ -260,7 +260,7 @@ class TestWorkflowInvoke:
         assert done.succeeded
 
     def test_execute_still_uses_draft_path(self, client):
-        r = MagicMock(content=b'{"executionId": "ex_2"}')
+        r = MagicMock(content=b'{"executionId": "ex_2"}', status_code=200)
         r.json.return_value = {"executionId": "ex_2"}
         with patch("requests.request", return_value=r) as m:
             client.workflows.execute("wf_1", {"a": 1})
