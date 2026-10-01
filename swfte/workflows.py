@@ -392,9 +392,12 @@ class Workflows:
             json=data,
             params=params,
             timeout=self._client.timeout,
+            allow_redirects=False,
         )
         
         response.raise_for_status()
+        if 300 <= response.status_code < 400:
+            raise requests.HTTPError("Redirect refused for authenticated workflow request", response=response)
         
         if response.content:
             return response.json()
@@ -652,14 +655,37 @@ class Workflows:
         """
         return self._invoke(workflow_id, inputs, resolve_callsite(callsite))
 
+    def invoke_version(
+        self, workflow_id: str, version: int, inputs: Optional[Dict[str, Any]] = None,
+        *, callsite: Optional[str] = None,
+    ) -> WorkflowInvocation:
+        """Invoke one immutable published version. Promotion cannot move this call to live."""
+        self._validate_version(version)
+        return self._invoke(workflow_id, inputs, resolve_callsite(callsite), version)
+
+    @staticmethod
+    def _validate_version(version: int) -> None:
+        if isinstance(version, bool) or not isinstance(version, int) or not 1 <= version <= 2147483647:
+            raise InvalidRequestError("version must be a positive 32-bit integer")
+
+    def invoke_version_and_wait(
+        self, workflow_id: str, version: int, inputs: Optional[Dict[str, Any]] = None,
+        timeout: float = 300, poll_interval: float = 2, raise_on_pause: bool = False,
+        *, callsite: Optional[str] = None,
+    ) -> WorkflowExecution:
+        """Invoke the selected snapshot and poll; attribution belongs only to the POST."""
+        self._validate_version(version)
+        invocation = self._invoke(workflow_id, inputs, resolve_callsite(callsite), version)
+        return self._poll_until_terminal(invocation.execution_id, timeout, poll_interval, raise_on_pause)
+
     def _invoke(
-        self, workflow_id: str, inputs: Optional[Dict[str, Any]], callsite: Optional[str]
+        self, workflow_id: str, inputs: Optional[Dict[str, Any]], callsite: Optional[str], version: Optional[int] = None
     ) -> WorkflowInvocation:
         if not workflow_id:
             raise InvalidRequestError("workflow_id is required")
         res = self._client._api_request(
             "POST",
-            f"/v2/workflows/{quote(workflow_id, safe='')}/invoke",
+            f"/v2/workflows/{quote(workflow_id, safe='')}{'/versions/' + str(version) if version is not None else ''}/invoke",
             json=inputs or {},
             extra_headers=callsite_headers(callsite),
         )
@@ -951,8 +977,6 @@ class Workflows:
         """
         url = f"{self._get_base_url()}/{workflow_id}/agent/{agent_id}"
         self._make_request("DELETE", url)
-
-
 
 
 

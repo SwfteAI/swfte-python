@@ -83,8 +83,11 @@ class V2Resource:
             files=files,
             timeout=self._client.timeout,
             stream=stream,
+            allow_redirects=False,
         )
         response.raise_for_status()
+        if 300 <= response.status_code < 400:
+            raise requests.HTTPError("Redirect refused for authenticated resource request", response=response)
 
         if stream:
             return response

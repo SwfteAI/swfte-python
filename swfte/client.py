@@ -342,6 +342,7 @@ class SwfteClient:
                 json=json,
                 params=clean_params,
                 timeout=self.timeout,
+                allow_redirects=False,
             )
         except requests.Timeout as exc:
             raise SwfteError(f"Request timed out: {method} {path}") from exc
@@ -363,4 +364,3 @@ class SwfteClient:
                 raise RateLimitError(message)
             raise APIError(message, status_code=status, body=body)
         return body
-

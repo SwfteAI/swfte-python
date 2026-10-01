@@ -187,9 +187,12 @@ class Agents:
             json=data,
             params=params,
             timeout=self._client.timeout,
+            allow_redirects=False,
         )
         
         response.raise_for_status()
+        if 300 <= response.status_code < 400:
+            raise requests.HTTPError("Redirect refused for authenticated agent request", response=response)
         
         if response.content:
             return response.json()
@@ -467,4 +470,3 @@ class Agents:
             extra_headers=extra,
         )
         return AgentChatResponse.from_dict(raw)
-
