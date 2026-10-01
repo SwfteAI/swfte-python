@@ -1,6 +1,7 @@
 """Exercise actual wire branches and redirect boundaries; server snapshot fixtures are not live backend credit."""
 import json
 import threading
+from urllib.parse import unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 from swfte import SwfteClient
@@ -13,13 +14,14 @@ class Handler(BaseHTTPRequestHandler):
         self.server.seen.append((self.command,self.path,self.headers.get('X-Swfte-Callsite')))
         if self.server.redirect:
             self.send_response(302); self.send_header('Location',self.server.redirect); self.end_headers(); return
-        if self.headers.get('X-Workspace-Id') == 'B' or '/versions/9/' in self.path:
+        if self.headers.get('X-Workspace-Id') == 'B' or ('/versions/9/' in self.path or '/versions/9.9.9/' in self.path):
             status,body=404,{'error':'VERSION_NOT_PUBLISHED'}
         elif self.path.endswith('/status'):
             version=self.server.executions[self.path.split('/')[-2]]
             status,body=200,{'execution':{'executionId':'ex','status':'SUCCEEDED','workflowVersion':version,'outputData':{'marker':'snapshot-'+str(version)}}}
         else:
-            version=int(self.path.split('/versions/')[1].split('/')[0]) if '/versions/' in self.path else self.server.live
+            segment=unquote(self.path.split('/versions/')[1].split('/')[0]) if '/versions/' in self.path else None
+            version=(int(segment) if segment.isdigit() else segment) if segment is not None else self.server.live
             eid='ex_'+str(len(self.server.executions)); self.server.executions[eid]=version
             status,body=200,{'executionId':eid,'status':'PENDING','sessionId':'session','response':'ok','runId':'run'}
         raw=json.dumps(body).encode(); self.send_response(status); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(raw))); self.end_headers(); self.wfile.write(raw)
@@ -77,3 +79,33 @@ def test_real_redirect_never_forwards_to_second_listener(server):
             with pytest.raises(Exception): run()
         assert canary.seen == []
     finally: canary.shutdown(); canary.server_close(); thread.join()
+
+
+def test_semantic_pins_preserve_exact_build_identity_and_never_fall_back_to_live(server):
+    c=client(server); server.live=4
+    invocation=c.workflows.invoke_version('wf_shared','1.0.7')
+    assert invocation.execution_id and server.seen[0][1:] == ('/v2/workflows/wf_shared/versions/1.0.7/invoke',None)
+    pinned=c.workflows.invoke_version_and_wait('wf_shared','1.0.7',callsite=ID,poll_interval=0.001)
+    assert pinned.outputs == {'marker':'snapshot-1.0.7'}
+    build='1.0.7-rc.2+build.09'
+    prerelease=c.workflows.invoke_version_and_wait('wf_shared',build,callsite=ID,poll_interval=0.001)
+    assert prerelease.outputs == {'marker':'snapshot-'+build}
+    assert [row for row in server.seen if row[1].endswith('/invoke')][-1][1:] == ('/v2/workflows/wf_shared/versions/1.0.7-rc.2%2Bbuild.09/invoke',ID)
+    boundary='1.0.7+'+'a'*122
+    assert len(boundary)==128
+    c.workflows.invoke_version('wf_shared',boundary)
+    assert server.seen[-1][1] == '/v2/workflows/wf_shared/versions/1.0.7%2B'+'a'*122+'/invoke'
+    for target,version in [(c,'9.9.9'),(client(server,'B'),'1.0.7')]:
+        with pytest.raises(Exception) as caught: target.workflows.invoke_version('wf_shared',version)
+        assert caught.value.status_code == 404
+    assert all(row[2] is None for row in server.seen if row[1].endswith('/status'))
+    assert all(row[1] != '/v2/workflows/wf_shared/invoke' for row in server.seen)
+
+def test_bad_semantic_strings_have_zero_effect_for_invoke_and_wait(server):
+    c=client(server)
+    for bad in ['', '5', '01.0.7', '1.0', '1.0.7/', '1.0.7?x=1', '1.0.7#x', '../1.0.7',
+                '.', '..', '1.0.7%2Fextra', ' 1.0.7', '1.0.7 ', '1.0.7\n', '\n1.0.7', '1.0.7\r', '1.0.7\0',
+                '١.0.7', '1.0.7+', '1.0.7-', '1.0.7+'+'a'*123]:
+        with pytest.raises(Exception): c.workflows.invoke_version('wf_shared',bad,callsite=ID)
+        with pytest.raises(Exception): c.workflows.invoke_version_and_wait('wf_shared',bad,callsite=ID,poll_interval=0.001)
+        assert server.seen == []

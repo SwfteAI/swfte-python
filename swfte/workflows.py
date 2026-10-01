@@ -3,6 +3,7 @@ Workflow management for the Swfte SDK.
 """
 
 import json
+import re
 from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 from enum import Enum
@@ -18,6 +19,9 @@ from .exceptions import (
     WorkflowPausedError,
     WorkflowTimeoutError,
 )
+
+
+_SEMANTIC_VERSION = re.compile(r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$")
 
 
 class ExecutionStatus(Enum):
@@ -656,7 +660,7 @@ class Workflows:
         return self._invoke(workflow_id, inputs, resolve_callsite(callsite))
 
     def invoke_version(
-        self, workflow_id: str, version: int, inputs: Optional[Dict[str, Any]] = None,
+        self, workflow_id: str, version: Union[int, str], inputs: Optional[Dict[str, Any]] = None,
         *, callsite: Optional[str] = None,
     ) -> WorkflowInvocation:
         """Invoke one immutable published version. Promotion cannot move this call to live."""
@@ -664,12 +668,15 @@ class Workflows:
         return self._invoke(workflow_id, inputs, resolve_callsite(callsite), version)
 
     @staticmethod
-    def _validate_version(version: int) -> None:
-        if isinstance(version, bool) or not isinstance(version, int) or not 1 <= version <= 2147483647:
-            raise InvalidRequestError("version must be a positive 32-bit integer")
+    def _validate_version(version: Union[int, str]) -> None:
+        if isinstance(version, int) and not isinstance(version, bool) and 1 <= version <= 2147483647:
+            return
+        if isinstance(version, str) and len(version) <= 128 and _SEMANTIC_VERSION.fullmatch(version):
+            return
+        raise InvalidRequestError("version must be a positive 32-bit integer or a bounded semantic version string")
 
     def invoke_version_and_wait(
-        self, workflow_id: str, version: int, inputs: Optional[Dict[str, Any]] = None,
+        self, workflow_id: str, version: Union[int, str], inputs: Optional[Dict[str, Any]] = None,
         timeout: float = 300, poll_interval: float = 2, raise_on_pause: bool = False,
         *, callsite: Optional[str] = None,
     ) -> WorkflowExecution:
@@ -679,13 +686,13 @@ class Workflows:
         return self._poll_until_terminal(invocation.execution_id, timeout, poll_interval, raise_on_pause)
 
     def _invoke(
-        self, workflow_id: str, inputs: Optional[Dict[str, Any]], callsite: Optional[str], version: Optional[int] = None
+        self, workflow_id: str, inputs: Optional[Dict[str, Any]], callsite: Optional[str], version: Optional[Union[int, str]] = None
     ) -> WorkflowInvocation:
         if not workflow_id:
             raise InvalidRequestError("workflow_id is required")
         res = self._client._api_request(
             "POST",
-            f"/v2/workflows/{quote(workflow_id, safe='')}{'/versions/' + str(version) if version is not None else ''}/invoke",
+            f"/v2/workflows/{quote(workflow_id, safe='')}{'/versions/' + quote(str(version), safe='') if version is not None else ''}/invoke",
             json=inputs or {},
             extra_headers=callsite_headers(callsite),
         )
