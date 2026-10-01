@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from urllib.parse import quote
 import requests
 
+from . import _http
 from ._base import _raise_for_status
 
 from .exceptions import InvalidRequestError
@@ -182,7 +183,7 @@ class Agents:
         """Make an HTTP request."""
         headers = self._client._get_headers()
         
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,

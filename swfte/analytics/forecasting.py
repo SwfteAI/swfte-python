@@ -16,6 +16,7 @@ from enum import Enum
 import requests
 
 
+from .. import _http
 # =============================================================================
 # Enums
 # =============================================================================
@@ -169,7 +170,7 @@ class UsageForecaster:
         if agent_id:
             params["agentId"] = agent_id
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -206,7 +207,7 @@ class UsageForecaster:
         """
         url = f"{self._get_base_url()}/v1/analytics/enterprise/forecasting/growth"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params={"workspaceId": workspace_id, "horizonMonths": horizon_months},
@@ -266,7 +267,7 @@ class BudgetPredictor:
             "includeScenarios": str(include_scenarios).lower(),
         }
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -315,7 +316,7 @@ class BudgetPredictor:
             "assumptions": assumptions,
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -376,7 +377,7 @@ class CapacityPlanner:
         """
         url = f"{self._get_base_url()}/v1/analytics/enterprise/forecasting/capacity"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params={"workspaceId": workspace_id, "horizonDays": horizon_days},
@@ -416,7 +417,7 @@ class CapacityPlanner:
         """
         url = f"{self._get_base_url()}/v1/analytics/enterprise/forecasting/scaling"
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json={"workspaceId": workspace_id, "scaleFactor": scale_factor},
@@ -489,7 +490,7 @@ class TrendAnalyzer:
         if agent_id:
             params["agentId"] = agent_id
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -539,7 +540,7 @@ class TrendAnalyzer:
             "period2": {"start": period2_start, "end": period2_end},
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,

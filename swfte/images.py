@@ -4,6 +4,7 @@ Image generation API.
 
 from typing import Optional, List, Literal
 import requests
+from . import _http
 from .models import ImageGenerationResponse
 from .exceptions import APIError, AuthenticationError
 
@@ -69,7 +70,7 @@ class Images:
         
         headers = self.client._get_headers()
         
-        response = requests.post(
+        response = _http.post(
             url,
             json=payload,
             headers=headers,
@@ -124,7 +125,7 @@ class Images:
         headers = self.client._get_headers()
         del headers["Content-Type"]  # Let requests set it for multipart
         
-        response = requests.post(
+        response = _http.post(
             url,
             files=files,
             data=data,

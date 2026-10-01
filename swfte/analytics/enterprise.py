@@ -19,6 +19,7 @@ from typing import Optional, List, Dict, Any, Callable
 from datetime import datetime, timedelta
 from enum import Enum
 import requests
+from .. import _http
 import json
 
 
@@ -386,7 +387,7 @@ class TeamAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -432,7 +433,7 @@ class TeamAnalytics:
         """Get all team members with analytics."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/teams/{team_id}/members"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params={"orderBy": order_by, "orderDir": order_dir, "limit": limit},
@@ -471,7 +472,7 @@ class TeamAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -511,7 +512,7 @@ class AnomalyDetection:
         if workspace_id:
             params["workspaceId"] = workspace_id
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -559,7 +560,7 @@ class AnomalyDetection:
         if severity:
             params["severity"] = severity
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -596,7 +597,7 @@ class AnomalyDetection:
         """Configure custom anomaly thresholds."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/anomalies/thresholds"
 
-        response = requests.put(
+        response = _http.put(
             url,
             headers=self._client._get_headers(),
             json={"workspaceId": workspace_id, "thresholds": thresholds},
@@ -643,7 +644,7 @@ class ABTestingAnalytics:
             "minSampleSize": min_sample_size,
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -658,7 +659,7 @@ class ABTestingAnalytics:
         """Get A/B test results."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/ab-tests/{test_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -682,7 +683,7 @@ class ABTestingAnalytics:
         if status:
             params["status"] = status
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -700,7 +701,7 @@ class ABTestingAnalytics:
         if winner:
             payload["winner"] = winner
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -761,7 +762,7 @@ class ComplianceReporting:
         if end_date:
             payload["endDate"] = end_date
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -806,7 +807,7 @@ class ComplianceReporting:
         if action_type:
             params["actionType"] = action_type
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -834,7 +835,7 @@ class ComplianceReporting:
         if pii_retention_days:
             payload["piiRetentionDays"] = pii_retention_days
 
-        response = requests.put(
+        response = _http.put(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -873,7 +874,7 @@ class CostOptimization:
             "maxEffort": max_effort,
         }
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -914,7 +915,7 @@ class CostOptimization:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -943,7 +944,7 @@ class CostOptimization:
         if monthly_budget_usd:
             payload["monthlyBudgetUsd"] = monthly_budget_usd
 
-        response = requests.put(
+        response = _http.put(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -985,7 +986,7 @@ class ModelComparison:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1026,7 +1027,7 @@ class ModelComparison:
         if max_cost_per_request:
             params["maxCostPerRequest"] = max_cost_per_request
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1054,7 +1055,7 @@ class UserJourneyAnalytics:
         """Get a user's journey."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/journeys/{user_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -1094,7 +1095,7 @@ class UserJourneyAnalytics:
             "periods": periods,
         }
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1114,7 +1115,7 @@ class UserJourneyAnalytics:
 
         params = {"workspaceId": workspace_id, "threshold": threshold}
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1153,7 +1154,7 @@ class RAGQualityMetrics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1196,7 +1197,7 @@ class RAGQualityMetrics:
         if ground_truth:
             payload["groundTruth"] = ground_truth
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -1238,7 +1239,7 @@ class EmbeddingAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1274,7 +1275,7 @@ class EmbeddingAnalytics:
         if labels:
             payload["labels"] = labels
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,

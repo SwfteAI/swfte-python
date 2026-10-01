@@ -74,7 +74,7 @@ class TestBaseUrl:
     def test_existing_resources_follow_api_base_url(self, monkeypatch):
         monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
         c = SwfteClient(api_key="k", api_base_url="http://local:1")
-        with patch("requests.request", return_value=MagicMock(content=b"")) as m:
+        with patch("requests.request", return_value=MagicMock(content=b"", status_code=204)) as m:
             m.return_value.raise_for_status.return_value = None
             c.workflows.delete("wf_1")
         assert kw(m)["url"] == "http://local:1/v2/workflows/wf_1"

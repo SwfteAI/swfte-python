@@ -5,6 +5,7 @@ Data models for the Swfte SDK.
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 import requests
+from . import _http
 from .exceptions import APIError, AuthenticationError
 
 
@@ -258,7 +259,7 @@ class Models:
         url = f"{self.client.base_url}/models"
         headers = self.client._get_headers()
         
-        response = requests.get(url, headers=headers, timeout=self.client.timeout)
+        response = _http.get(url, headers=headers, timeout=self.client.timeout)
         
         if response.status_code == 401:
             raise AuthenticationError("Invalid API key")
@@ -281,7 +282,7 @@ class Models:
         url = f"{self.client.base_url}/models/{model_id}"
         headers = self.client._get_headers()
         
-        response = requests.get(url, headers=headers, timeout=self.client.timeout)
+        response = _http.get(url, headers=headers, timeout=self.client.timeout)
         
         if response.status_code == 401:
             raise AuthenticationError("Invalid API key")

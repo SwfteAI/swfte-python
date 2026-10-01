@@ -39,6 +39,11 @@ def test_every_action_is_pinned_to_a_full_sha_with_a_tag_comment():
             assert re.match(r"\s*# v\d", rest), (ref, rest)
 
 
+def test_pr_ci_has_explicit_read_only_contents_permission():
+    assert re.search(r"^permissions:\n  contents: read\n", CI, re.M)
+    assert not re.search(r"\b(?:contents|id-token|actions|packages): write\b", CI)
+
+
 def test_readme_links_point_at_swfte_sdk_not_swfte():
     readme = (ROOT / "README.md").read_text()
     assert "pypi.org/project/swfte/" not in readme
@@ -50,6 +55,17 @@ def test_readme_links_point_at_swfte_sdk_not_swfte():
 def test_requests_floor_is_patched():
     text = (ROOT / "pyproject.toml").read_text()
     assert '"requests>=2.32.4"' in text
+
+
+def test_build_contract_and_ci_preserve_advertised_python_38():
+    text = (ROOT / "pyproject.toml").read_text()
+    assert '"setuptools>=68.0.0,<77"' in text
+    assert 'license = {file = "LICENSE"}' in text
+    assert not re.search(r"^license-files\s*=", text, re.M)
+    assert 'requires-python = ">=3.8"' in text
+    assert "python-version: ['3.8', '3.9'" in CI
+    assert "python -m build" in CI
+    assert "python -m twine check" in CI
 
 
 def test_shadowing_module_is_gone_and_nothing_imports_it():

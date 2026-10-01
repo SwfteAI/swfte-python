@@ -104,8 +104,9 @@ class TestChatCompletionsRetry:
             client.chat.completions.create(model="m", messages=[{"role": "user", "content": "hi"}])
         assert len(s.hits) == 1
 
-    def test_connection_refused_is_retried_then_raises(self):
-        # nothing listens on port 1: a connect error, safe to retry, must still raise typed
+    def test_connection_refused_raises_without_a_generic_connection_retry(self):
+        # A generic ConnectionError cannot distinguish refusal from a failure
+        # after the server accepted the body, so only ConnectTimeout is retried.
         client = SwfteClient(api_key="k", base_url="http://127.0.0.1:1", max_retries=2, timeout=1)
         with pytest.raises(APIError):
             client.chat.completions.create(model="m", messages=[{"role": "user", "content": "hi"}])

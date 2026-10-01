@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 import requests
 
+from . import _http
 from ._base import _raise_for_status
 
 
@@ -144,7 +145,7 @@ class Conversations:
         """Make an HTTP request."""
         headers = self._client._get_headers()
 
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,

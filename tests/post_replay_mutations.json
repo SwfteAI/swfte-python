@@ -1,0 +1,102 @@
+{
+  "checkout": "/private/tmp/swfte-p5-resume-20261001/python",
+  "evidence": "/private/tmp/swfte-p5-resume-20261001/.unlazy/p5-code/evidence/sdk-python-post-mutants",
+  "mutants": [
+    {
+      "id": "PY_GENERIC_CONNECTION_REPLAY",
+      "path": "swfte/chat.py",
+      "before": "            except requests.exceptions.ConnectTimeout as e:",
+      "after": "            except requests.exceptions.ConnectionError as e:",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_never_replays_after_server_consumes_body",
+      "assertion": "a consumed POST was replayed"
+    },
+    {
+      "id": "PY_READ_TIMEOUT_REPLAY",
+      "path": "swfte/chat.py",
+      "before": "            except requests.exceptions.ConnectTimeout as e:",
+      "after": "            except requests.exceptions.Timeout as e:",
+      "selector": "tests/unit/test_post_replay.py::test_generic_connection_and_read_errors_never_retry",
+      "assertion": "generic response-side failure was retried"
+    },
+    {
+      "id": "PY_ZERO_ATTEMPT",
+      "path": "swfte/chat.py",
+      "before": "        attempts = max(1, self.client.max_retries)",
+      "after": "        attempts = max(0, self.client.max_retries)",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_never_replays_after_server_consumes_body",
+      "assertion": "a consumed POST was replayed"
+    },
+    {
+      "id": "PY_SAFE_CONNECT_RETRY_DISABLED",
+      "path": "swfte/chat.py",
+      "before": "                if attempt == attempts - 1:",
+      "after": "                if True:",
+      "selector": "tests/unit/test_post_replay.py::test_connect_timeout_before_send_can_retry",
+      "assertion": "a safe pre-send ConnectTimeout prevented the normal response"
+    },
+    {
+      "id": "PY_CONNECT_BUDGET_UNBOUNDED",
+      "path": "swfte/chat.py",
+      "before": "        attempts = max(1, self.client.max_retries)",
+      "after": "        attempts = max(1, self.client.max_retries + 1)",
+      "selector": "tests/unit/test_post_replay.py::test_connect_timeout_budget_is_bounded",
+      "assertion": "pre-send ConnectTimeout exceeded its bounded attempts"
+    },
+    {
+      "id": "PY_REDIRECT_FOLLOW",
+      "path": "swfte/_http.py",
+      "before": "    kwargs[\"allow_redirects\"] = False",
+      "after": "    kwargs[\"allow_redirects\"] = True",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_redirects_never_reach_cross_origin_sink",
+      "assertion": "cross-origin redirect disclosed the request method, body or credential headers"
+    },
+    {
+      "id": "PY_REDIRECT_TYPED_RESPONSE",
+      "path": "swfte/_http.py",
+      "before": "    if 300 <= response.status_code < 400:",
+      "after": "    if False:",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_redirects_never_reach_cross_origin_sink",
+      "assertion": "redirect must retain a typed HTTP response error"
+    },
+    {
+      "id": "PY_CHAT_NONSTREAM_GUARD_BYPASS",
+      "path": "swfte/chat.py",
+      "before": "                response = _http.post(\n                    url,",
+      "after": "                response = requests.post(\n                    url,",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_redirects_never_reach_cross_origin_sink",
+      "assertion": "cross-origin redirect disclosed the request method, body or credential headers"
+    },
+    {
+      "id": "PY_CHAT_STREAM_GUARD_BYPASS",
+      "path": "swfte/chat.py",
+      "before": "        response = _http.post(\n            stream_url,",
+      "after": "        response = requests.post(\n            stream_url,",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_redirects_never_reach_cross_origin_sink",
+      "assertion": "cross-origin redirect disclosed the request method, body or credential headers"
+    },
+    {
+      "id": "PY_API_GUARD_BYPASS",
+      "path": "swfte/client.py",
+      "before": "            response = _http.request(",
+      "after": "            response = requests.request(",
+      "selector": "tests/unit/test_post_replay.py::test_central_api_redirect_preserves_status_without_disclosing_headers_or_body",
+      "assertion": "central transport forwarded credentials or body across origins"
+    },
+    {
+      "id": "PY_V2_FILES_GUARD_BYPASS",
+      "path": "swfte/_base.py",
+      "before": "        response = _http.request(",
+      "after": "        response = requests.request(",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_redirects_never_reach_cross_origin_sink",
+      "assertion": "cross-origin redirect disclosed the request method, body or credential headers"
+    },
+    {
+      "id": "PY_WORKFLOW_GUARD_BYPASS",
+      "path": "swfte/workflows.py",
+      "before": "        response = _http.request(",
+      "after": "        response = requests.request(",
+      "selector": "tests/unit/test_post_replay.py::test_public_post_redirects_never_reach_cross_origin_sink",
+      "assertion": "cross-origin redirect disclosed the request method, body or credential headers"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ Chat completions API.
 import json
 from typing import List, Dict, Any, Optional, Union, Iterator
 import requests
+from . import _http
 from .models import ChatCompletion, ChatCompletionChunk, Message
 from .exceptions import APIError, RateLimitError, AuthenticationError
 
@@ -94,7 +95,7 @@ class Completions:
         attempts = max(1, self.client.max_retries)
         for attempt in range(attempts):
             try:
-                response = requests.post(
+                response = _http.post(
                     url,
                     json=payload,
                     headers=headers,
@@ -128,7 +129,7 @@ class Completions:
         # Use the dedicated streaming endpoint
         stream_url = url.replace("/chat/completions", "/chat/completions/stream")
 
-        response = requests.post(
+        response = _http.post(
             stream_url,
             json=payload,
             headers=headers,

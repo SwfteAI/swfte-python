@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 import requests
 
+from . import _http
 from ._base import _raise_for_status
 
 
@@ -147,7 +148,7 @@ class Secrets:
         """Make an HTTP request."""
         headers = self._client._get_headers()
 
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,

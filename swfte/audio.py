@@ -4,6 +4,7 @@ Audio API (transcription and text-to-speech).
 
 from typing import Optional, Literal
 import requests
+from . import _http
 from .exceptions import APIError, AuthenticationError
 
 
@@ -65,7 +66,7 @@ class Transcriptions:
         headers = self.client._get_headers()
         del headers["Content-Type"]
         
-        response = requests.post(
+        response = _http.post(
             url,
             files=files,
             data=data,
@@ -133,7 +134,7 @@ class Speech:
         
         headers = self.client._get_headers()
         
-        response = requests.post(
+        response = _http.post(
             url,
             json=payload,
             headers=headers,

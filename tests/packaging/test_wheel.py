@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import zipfile
+from email.parser import Parser
 
 import pytest
 
@@ -42,7 +43,7 @@ def test_every_module_in_the_wheel_parses_as_python_38(extracted):
     py = [n for n in names if n.endswith(".py")]
     assert py
     for n in py:
-        ast.parse((dest / n).read_text(), filename=n, feature_version=(3, 8))
+        ast.parse((dest / n).read_text(), filename=n, feature_version=8)
 
 
 def test_every_module_in_the_wheel_imports(extracted):
@@ -75,6 +76,18 @@ def test_wheel_has_no_shadow_module_and_ships_py_typed(extracted):
     assert "swfte/analytics.py" not in names
     assert "swfte/analytics/__init__.py" in names
     assert "swfte/py.typed" in names
+
+
+def test_wheel_preserves_mit_license_and_python_38_minimum(extracted):
+    dest, names = extracted
+    metadata_name = next(n for n in names if n.endswith(".dist-info/METADATA"))
+    metadata = Parser().parsestr((dest / metadata_name).read_text())
+    assert metadata["Name"] == "swfte-sdk"
+    assert metadata["Requires-Python"] == ">=3.8"
+    assert "MIT License" in metadata["License"]
+    license_names = [n for n in names if n.endswith("/LICENSE") and ".dist-info/" in n]
+    assert len(license_names) == 1
+    assert (dest / license_names[0]).read_bytes() == (ROOT / "LICENSE").read_bytes()
 
 
 def test_wheel_ships_no_tests_examples_or_env_files(extracted):

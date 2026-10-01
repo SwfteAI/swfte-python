@@ -15,6 +15,7 @@ from typing import Optional, List, Dict, Any, Callable, Union
 from datetime import datetime, timedelta
 from enum import Enum
 import requests
+from .. import _http
 import json
 
 
@@ -264,7 +265,7 @@ class AlertManager:
         if escalation_policy_id:
             payload["escalationPolicyId"] = escalation_policy_id
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -278,7 +279,7 @@ class AlertManager:
         """Get an alert rule by ID."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/rules/{rule_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -301,7 +302,7 @@ class AlertManager:
         if severity:
             params["severity"] = severity
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -315,7 +316,7 @@ class AlertManager:
         """Update an alert rule."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/rules/{rule_id}"
 
-        response = requests.patch(
+        response = _http.patch(
             url,
             headers=self._client._get_headers(),
             json=updates,
@@ -329,7 +330,7 @@ class AlertManager:
         """Delete an alert rule."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/rules/{rule_id}"
 
-        response = requests.delete(
+        response = _http.delete(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -394,7 +395,7 @@ class AlertManager:
         if severity:
             params["severity"] = severity
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -425,7 +426,7 @@ class AlertManager:
         if status:
             params["status"] = status
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -439,7 +440,7 @@ class AlertManager:
         """Get alert details."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/{alert_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -461,7 +462,7 @@ class AlertManager:
         if comment:
             payload["comment"] = comment
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -486,7 +487,7 @@ class AlertManager:
         if comment:
             payload["comment"] = comment
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -512,7 +513,7 @@ class AlertManager:
         if reason:
             payload["reason"] = reason
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -617,7 +618,7 @@ class WebhookManager:
         if template:
             payload["template"] = template
 
-        response = requests.post(
+        response = _http.post(
             api_url,
             headers=self._client._get_headers(),
             json=payload,
@@ -641,7 +642,7 @@ class WebhookManager:
         """List all webhook destinations."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/channels/webhooks"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -667,7 +668,7 @@ class WebhookManager:
         """Delete a webhook destination."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/channels/webhooks/{webhook_id}"
 
-        response = requests.delete(
+        response = _http.delete(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -679,7 +680,7 @@ class WebhookManager:
         """Test a webhook destination."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/channels/webhooks/{webhook_id}/test"
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -722,7 +723,7 @@ class SlackManager:
         if channel:
             payload["channel"] = channel
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -745,7 +746,7 @@ class SlackManager:
         """List all Slack integrations."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/channels/slack"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -770,7 +771,7 @@ class SlackManager:
         """Delete a Slack integration."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/channels/slack/{integration_id}"
 
-        response = requests.delete(
+        response = _http.delete(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -812,7 +813,7 @@ class PagerDutyManager:
             },
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -833,7 +834,7 @@ class PagerDutyManager:
         """List all PagerDuty integrations."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/channels/pagerduty"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -896,7 +897,7 @@ class EscalationManager:
             "repeatIntervalMinutes": repeat_interval_minutes,
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -918,7 +919,7 @@ class EscalationManager:
         """List all escalation policies."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/escalations"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -972,7 +973,7 @@ class PolicyManager:
         if escalation_policy_id:
             payload["escalationPolicyId"] = escalation_policy_id
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -995,7 +996,7 @@ class PolicyManager:
         """List all notification policies."""
         url = f"{self._get_base_url()}/v1/analytics/alerts/policies"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout

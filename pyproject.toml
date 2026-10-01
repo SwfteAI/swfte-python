@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77.0.0", "wheel"]
+requires = ["setuptools>=68.0.0,<77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,8 +7,7 @@ name = "swfte-sdk"
 version = "1.2.0"
 description = "Official Python SDK for Swfte — unified API for 200+ AI models, agents, workflows, chatflows, RAG, voice and MCP. https://www.swfte.com"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = {file = "LICENSE"}
 requires-python = ">=3.8"
 authors = [
     {name = "Swfte, Inc.", email = "sdk@swfte.com"}

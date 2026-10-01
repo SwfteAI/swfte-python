@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from . import _http
 from .exceptions import AuthenticationError, RateLimitError
 
 
@@ -82,7 +83,7 @@ class V2Resource:
             # let requests build the multipart boundary
             headers.pop("Content-Type", None)
 
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,

@@ -18,6 +18,7 @@ from datetime import datetime
 from enum import Enum
 import requests
 
+from .. import _http
 try:
     import websocket
     HAS_WEBSOCKET = True
@@ -239,7 +240,7 @@ class RealtimeAnalytics:
                 params["since"] = last_timestamp
 
             try:
-                response = requests.get(
+                response = _http.get(
                     url,
                     headers=self._client._get_headers(),
                     params=params,
@@ -325,7 +326,7 @@ class RealtimeAnalytics:
             "filters": filters or {},
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -347,7 +348,7 @@ class RealtimeAnalytics:
         """List all active subscriptions."""
         url = f"{self._get_base_url()}/v1/analytics/realtime/subscriptions"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -371,7 +372,7 @@ class RealtimeAnalytics:
         """Delete a subscription."""
         url = f"{self._get_base_url()}/v1/analytics/realtime/subscriptions/{subscription_id}"
 
-        response = requests.delete(
+        response = _http.delete(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -406,7 +407,7 @@ class RealtimeAnalytics:
                 params["agentId"] = agent_id
 
             try:
-                response = requests.get(
+                response = _http.get(
                     url,
                     headers=self._client._get_headers(),
                     params=params,
@@ -580,7 +581,7 @@ class LiveDashboard:
             "includeAlerts": str(include_alerts).lower(),
         }
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -620,7 +621,7 @@ class LiveDashboard:
         """Get dashboard widget configurations."""
         url = f"{self._get_base_url()}/v1/analytics/realtime/dashboard/widgets"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params={"workspaceId": workspace_id},
@@ -638,7 +639,7 @@ class LiveDashboard:
         """Save custom dashboard layout."""
         url = f"{self._get_base_url()}/v1/analytics/realtime/dashboard/layout"
 
-        response = requests.put(
+        response = _http.put(
             url,
             headers=self._client._get_headers(),
             json={"workspaceId": workspace_id, "layout": layout},

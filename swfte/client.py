@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from . import _http
 from ._base import _service_root
 from ._version import __version__
 
@@ -64,7 +65,9 @@ class SwfteClient:
         base_url: Gateway URL (chat completions, images, embeddings, audio, models).
             Defaults to https://api.swfte.com/agents/v2/gateway.
         timeout: Request timeout in seconds. Defaults to 60.
-        max_retries: Maximum number of retries for failed requests. Defaults to 3.
+        max_retries: Non-streaming chat attempts after a pre-send ConnectTimeout.
+            Generic connection errors and every other call are never retried.
+            Values below 1 still make one attempt; defaults to 3.
         workspace_id: Workspace to scope requests to. Reads from SWFTE_WORKSPACE_ID.
         api_base_url: Root of the agents-service API, where agent chat
             (``/v1/agents/...``), workflow invoke (``/v2/workflows/...``), the
@@ -350,7 +353,7 @@ class SwfteClient:
             clean_params = clean_params or None
 
         try:
-            response = requests.request(
+            response = _http.request(
                 method=method,
                 url=f"{self.api_base_url}{path}",
                 headers=self._get_headers(),
@@ -378,4 +381,3 @@ class SwfteClient:
                 raise RateLimitError(message)
             raise APIError(message, status_code=status, body=body)
         return body
-

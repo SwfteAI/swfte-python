@@ -20,10 +20,17 @@ Versions 1.0.x and 1.1.x were never published; 1.2.0 supersedes them.
   point at `swfte-sdk`.
 - Removed the syntactically invalid `swfte/analytics.py` that shipped in the wheel
   and sdist (shadowed by the `swfte/analytics/` package, which is unchanged).
-- `chat.completions.create` no longer retries read timeouts (a retry could run and
-  bill the call more than once); only connection failures are retried, 403 is an
+- `chat.completions.create` no longer retries read timeouts or generic connection
+  failures after an accepted body (a retry could run and bill the call more than
+  once); only pre-send `ConnectTimeout` is retried, 403 is an
   `AuthenticationError`, and `max_retries=0` makes one attempt instead of
   silently returning `None`.
+- Authenticated SDK requests no longer follow redirects. Every 3xx is an
+  `APIError` with the original status/body; a 307/308 cannot forward prompts,
+  files or audio to another origin. Use the final endpoint URL directly.
+- Preserve Python 3.8 builds with a compatible setuptools 68–76 backend range
+  and legacy PEP 621 LICENSE metadata; CI includes 3.8 and builds actual artifacts
+  before packaging tests. Wheel and sdist retain the MIT license.
 - All V2 management resources raise `AuthenticationError` for 401/403 and
   `RateLimitError` for 429 (they raised a bare `requests.HTTPError`); other
   status codes still raise `requests.HTTPError`.

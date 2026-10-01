@@ -298,7 +298,7 @@ client = SwfteClient(
     api_key="sk-swfte-...",           # Required. Also reads SWFTE_API_KEY env var.
     base_url="https://api.swfte.com/agents/v2/gateway",  # Default
     timeout=60,                        # Request timeout in seconds
-    max_retries=3,                     # Retry count for failed requests
+    max_retries=3,                     # Chat attempts after a pre-send connect timeout only
     workspace_id="ws-...",             # Workspace scoping. Also reads SWFTE_WORKSPACE_ID.
     # api_base_url="https://api.swfte.com/agents",  # Optional; derived from base_url
 )
@@ -310,7 +310,7 @@ client = SwfteClient(
 | `base_url` | `str` | `https://api.swfte.com/agents/v2/gateway` | Gateway URL (chat completions, images, embeddings, audio, models) |
 | `api_base_url` | `str` | `SWFTE_API_BASE_URL` env, else `base_url` minus `/v2/gateway`, `/v1/gateway` or `/gateway` | agents-service root used by agents, workflows, catalog and the other management resources |
 | `timeout` | `int` | `60` | Request timeout (seconds) |
-| `max_retries` | `int` | `3` | Attempts for `chat.completions.create` (non-streaming) when the connection cannot be established. Other calls are never retried. Values below 1 mean one attempt |
+| `max_retries` | `int` | `3` | Attempts for non-streaming chat only after `requests.exceptions.ConnectTimeout`, which occurs before sending. Generic connection errors, read timeouts, HTTP errors and all other calls are never retried. Values below 1 mean one attempt |
 | `workspace_id` | `str` | `SWFTE_WORKSPACE_ID` env | Workspace ID |
 
 ## Error Handling
@@ -378,12 +378,16 @@ All contributors must sign the [Swfte CLA](https://cla.swfte.com) before their f
   `SWFTE_API_BASE_URL`) that uses `http://` to a non-loopback host emits a
   `UserWarning`, because the key would travel in cleartext.
 - **Retries.** Only `chat.completions.create` (non-streaming) retries, up to
-  `max_retries` attempts, and only when the connection could not be established.
-  Read timeouts, HTTP errors (including 401/403/429/5xx) and every other call are
+  `max_retries` attempts, and only after `ConnectTimeout` before the request body
+  was sent. Generic `ConnectionError` can mean a lost response after the server
+  already executed the call; it is never retried. Read timeouts, HTTP errors
+  (including 401/403/429/5xx) and every other call are
   not retried, so a call that may already have run is never repeated.
 - **Timeouts.** Every request has a timeout (`timeout`, 60 seconds by default).
-- **Redirects.** Redirects are followed by `requests`, which drops the
-  `Authorization` header when a redirect leaves the original host.
+- **Redirects.** SDK requests never follow redirects, including 302 and 307.
+  A redirect raises `APIError` with its HTTP status and response body. Stripping
+  `Authorization` alone would still forward prompts, files or audio on 307/308.
+  Configure the final endpoint URL directly instead of depending on redirects.
 
 Report vulnerabilities to security@swfte.com (see [SECURITY.md](SECURITY.md)).
 

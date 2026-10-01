@@ -4,6 +4,7 @@ Embeddings API.
 
 from typing import Union, List
 import requests
+from . import _http
 from .models import EmbeddingResponse
 from .exceptions import APIError, AuthenticationError
 
@@ -50,7 +51,7 @@ class Embeddings:
         
         headers = self.client._get_headers()
         
-        response = requests.post(
+        response = _http.post(
             url,
             json=payload,
             headers=headers,
