@@ -186,6 +186,8 @@ def test_public_post_normal_response_still_works(servers, case):
         assert result.data[0].url == "https://fixture.invalid/image"
     elif case == "embedding":
         assert result.data[0].embedding == [0.5, -0.2]
+    elif case == "workflow_execute":
+        assert result.id == "ex-1"
     else:
         assert result.execution_id == "ex-1"
 
