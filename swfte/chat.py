@@ -88,9 +88,9 @@ class Completions:
     
     def _send_request(self, url: str, payload: dict, headers: dict) -> ChatCompletion:
         """Send a non-streaming request."""
-        # Only failures that happen before the request reaches the server are
-        # retried (connect errors). A read timeout is NOT retried: the server
-        # may already be processing (and billing) the call.
+        # Requests documents ConnectTimeout as safe to retry: it happens before
+        # the body is sent. Generic ConnectionError also covers a response-side
+        # disconnect after execution, so it must never replay this billed POST.
         attempts = max(1, self.client.max_retries)
         for attempt in range(attempts):
             try:
@@ -114,9 +114,9 @@ class Completions:
                 data = response.json()
                 return ChatCompletion.from_dict(data)
 
-            except requests.exceptions.ConnectionError as e:
+            except requests.exceptions.ConnectTimeout as e:
                 if attempt == attempts - 1:
-                    raise APIError(f"Request failed: {str(e)}") from e
+                    raise APIError("Request timed out while connecting") from e
             except requests.exceptions.Timeout as e:
                 raise APIError("Request timed out") from e
             except requests.exceptions.RequestException as e:
@@ -164,4 +164,3 @@ class Chat:
     def __init__(self, client):
         self.client = client
         self.completions = Completions(client)
-
