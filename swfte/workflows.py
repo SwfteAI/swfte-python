@@ -21,7 +21,8 @@ from .exceptions import (
 )
 
 
-_SEMANTIC_VERSION = re.compile(r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$")
+_VERSION_PIN = re.compile(r"[A-Za-z0-9_.:@+-]+")
+_VERSION_ALNUM = re.compile(r"[A-Za-z0-9]")
 
 
 class ExecutionStatus(Enum):
@@ -601,6 +602,11 @@ class Workflows:
         response = self._make_request("POST", url, data=payload)
         return ValidationResult.from_dict(response)
     
+    @staticmethod
+    def _validate_workflow_id(workflow_id: str) -> None:
+        if not isinstance(workflow_id, str) or not 1 <= len(workflow_id) <= 128 or workflow_id in (".", "..") or re.fullmatch(r"[A-Za-z0-9_.@:-]+", workflow_id) is None:
+            raise InvalidRequestError("workflow_id must be a raw bounded safe artifact identifier")
+
     def execute(
         self,
         workflow_id: str,
@@ -627,8 +633,9 @@ class Workflows:
         Returns:
             The workflow execution.
         """
+        self._validate_workflow_id(workflow_id)
         extra = callsite_headers(resolve_callsite(callsite))
-        url = f"{self._get_base_url()}/{workflow_id}/execute"
+        url = f"{self._get_base_url()}/{quote(workflow_id, safe='')}/execute"
         params = {"skipValidation": skip_validation} if skip_validation else None
         response = self._make_request(
             "POST", url, data=inputs or {}, params=params, extra_headers=extra
@@ -663,7 +670,7 @@ class Workflows:
         self, workflow_id: str, version: Union[int, str], inputs: Optional[Dict[str, Any]] = None,
         *, callsite: Optional[str] = None,
     ) -> WorkflowInvocation:
-        """Invoke one immutable published version. Promotion cannot move this call to live."""
+        """Invoke an exact published label. Safe syntax grants no publication authority or live fallback."""
         self._validate_version(version)
         return self._invoke(workflow_id, inputs, resolve_callsite(callsite), version)
 
@@ -671,9 +678,9 @@ class Workflows:
     def _validate_version(version: Union[int, str]) -> None:
         if isinstance(version, int) and not isinstance(version, bool) and 1 <= version <= 2147483647:
             return
-        if isinstance(version, str) and len(version) <= 128 and _SEMANTIC_VERSION.fullmatch(version):
+        if isinstance(version, str) and 1 <= len(version) <= 128 and _VERSION_PIN.fullmatch(version) and _VERSION_ALNUM.search(version):
             return
-        raise InvalidRequestError("version must be a positive 32-bit integer or a bounded semantic version string")
+        raise InvalidRequestError("version must be a positive 32-bit integer or a bounded safe server version label")
 
     def invoke_version_and_wait(
         self, workflow_id: str, version: Union[int, str], inputs: Optional[Dict[str, Any]] = None,
@@ -688,8 +695,7 @@ class Workflows:
     def _invoke(
         self, workflow_id: str, inputs: Optional[Dict[str, Any]], callsite: Optional[str], version: Optional[Union[int, str]] = None
     ) -> WorkflowInvocation:
-        if not workflow_id:
-            raise InvalidRequestError("workflow_id is required")
+        self._validate_workflow_id(workflow_id)
         res = self._client._api_request(
             "POST",
             f"/v2/workflows/{quote(workflow_id, safe='')}{'/versions/' + quote(str(version), safe='') if version is not None else ''}/invoke",

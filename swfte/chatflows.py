@@ -8,8 +8,17 @@ delivery. See https://www.swfte.com/products/chatflows for product details.
 
 from typing import Any, Dict, List, Optional
 
+from urllib.parse import quote
+from .exceptions import InvalidRequestError
 from ._base import V2Resource
 from ._callsite import callsite_headers, resolve_callsite
+
+
+
+def _route_segment(value: str) -> str:
+    if not isinstance(value, str) or not value or value in ('.', '..') or any(ord(c) < 32 or ord(c) == 127 or 0xd800 <= ord(c) <= 0xdfff for c in value):
+        raise InvalidRequestError('identifier must be a nonempty raw route identity with valid Unicode')
+    return quote(value, safe='')
 
 
 class ChatFlows(V2Resource):
@@ -80,7 +89,7 @@ class ChatFlows(V2Resource):
         if context:
             body["context"] = context
         return self._request(
-            "POST", self._url(f"/{chatflow_id}/sessions"), data=body, extra_headers=extra
+            "POST", self._url(f"/{_route_segment(chatflow_id)}/sessions"), data=body, extra_headers=extra
         )
 
     def list_sessions(
@@ -92,17 +101,17 @@ class ChatFlows(V2Resource):
         """List sessions for a chatflow."""
         return self._request(
             "GET",
-            self._url(f"/{chatflow_id}/sessions"),
+            self._url(f"/{_route_segment(chatflow_id)}/sessions"),
             params={"page": page, "size": size},
         )
 
     def get_session(self, session_id: str) -> Dict[str, Any]:
         """Get a session by id (cross-chatflow lookup)."""
-        return self._request("GET", self._url(f"/sessions/{session_id}"))
+        return self._request("GET", self._url(f"/sessions/{_route_segment(session_id)}"))
 
     def stats(self, chatflow_id: str) -> Dict[str, Any]:
         """Aggregate session statistics for a chatflow."""
-        return self._request("GET", self._url(f"/{chatflow_id}/stats"))
+        return self._request("GET", self._url(f"/{_route_segment(chatflow_id)}/stats"))
 
     # ---- builder ------------------------------------------------------
 
@@ -147,7 +156,7 @@ class ChatFlows(V2Resource):
         """
         extra = callsite_headers(resolve_callsite(callsite))
         return self._request(
-            "POST", self._url(f"/builder/{chatflow_id}/test"), data=input, extra_headers=extra
+            "POST", self._url(f"/builder/{_route_segment(chatflow_id)}/test"), data=input, extra_headers=extra
         )
 
     def export(self, chatflow_id: str) -> Dict[str, Any]:

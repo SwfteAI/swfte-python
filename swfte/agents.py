@@ -129,6 +129,13 @@ class Agent:
         }
 
 
+
+def _route_segment(value: str) -> str:
+    if not isinstance(value, str) or not value or value in ('.', '..') or any(ord(c) < 32 or ord(c) == 127 or 0xd800 <= ord(c) <= 0xdfff for c in value):
+        raise InvalidRequestError('identifier must be a nonempty raw route identity with valid Unicode')
+    return quote(value, safe='')
+
+
 class Agents:
     """
     Agent management API for creating, updating, and managing AI agents.
@@ -465,7 +472,7 @@ class Agents:
             body["conversationId"] = conversation_id
         raw = self._client._api_request(
             "POST",
-            f"/v1/agents/{quote(agent_id, safe='')}/chat/{quote(uid, safe='')}",
+            f"/v1/agents/{_route_segment(agent_id)}/chat/{_route_segment(uid)}",
             json=body,
             extra_headers=extra,
         )
