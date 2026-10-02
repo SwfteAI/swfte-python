@@ -9,6 +9,7 @@ from urllib.parse import quote
 import requests
 
 from . import _http
+from ._privacy import credential_safe
 from ._base import _raise_for_status
 
 from .exceptions import InvalidRequestError
@@ -132,6 +133,7 @@ class Agent:
         }
 
 
+@credential_safe
 class Agents:
     """
     Agent management API for creating, updating, and managing AI agents.
@@ -464,4 +466,3 @@ class Agents:
             json=body,
         )
         return AgentChatResponse.from_dict(raw)
-

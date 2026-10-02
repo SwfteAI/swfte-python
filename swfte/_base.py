@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 import requests
 
 from . import _http
+from ._privacy import credential_safe
 from .exceptions import AuthenticationError, RateLimitError
 
 
@@ -34,6 +35,7 @@ def _raise_for_status(response: Any, method: str, url: str) -> None:
     response.raise_for_status()
 
 
+@credential_safe
 class V2Resource:
     """
     Base class for V2 resource clients.

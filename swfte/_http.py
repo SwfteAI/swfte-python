@@ -5,22 +5,30 @@ from typing import Any, Callable
 import requests
 
 from .exceptions import APIError
+from ._privacy import redact_diagnostic
 
 
 def _send(sender: Callable[..., requests.Response], *args: Any, **kwargs: Any) -> requests.Response:
     # Requests retains POST bodies on 307/308, even across origins. Dropping
     # Authorization on that redirect does not protect prompts, files or audio.
     kwargs["allow_redirects"] = False
-    response = sender(*args, **kwargs)
-    if 300 <= response.status_code < 400:
-        try:
-            body = response.json()
-        except ValueError:
-            body = response.text
-        response.close()
-        raise APIError("Redirect refused: HTTP {}".format(response.status_code),
-                       status_code=response.status_code, body=body)
-    return response
+    authorization = (kwargs.get("headers") or {}).get("Authorization", "")
+    credential = authorization[7:] if authorization.startswith("Bearer ") else authorization
+    safe = None
+    try:
+        response = sender(*args, **kwargs)
+        if 300 <= response.status_code < 400:
+            try:
+                body = response.json()
+            except ValueError:
+                body = response.text
+            response.close()
+            raise APIError("Redirect refused: HTTP {}".format(response.status_code),
+                           status_code=response.status_code, body=body)
+        return response
+    except Exception as error:
+        safe = redact_diagnostic(error, credential)
+    raise safe from safe.__cause__
 
 
 def request(*args: Any, **kwargs: Any) -> requests.Response:

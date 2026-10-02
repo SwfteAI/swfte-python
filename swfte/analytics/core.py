@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 import requests
 from .. import _http
+from .._privacy import credential_safe
 import json
 
 
@@ -288,6 +289,7 @@ class Analytics:
         return self._custom
 
 
+@credential_safe
 class PromptAnalytics:
     """Prompt pattern analytics with enterprise extensions."""
 
@@ -578,6 +580,7 @@ class PromptAnalytics:
         return result
 
 
+@credential_safe
 class PIIAnalytics:
     """Enterprise PII detection with compliance features."""
 
@@ -703,6 +706,7 @@ class PIIAnalytics:
         return response.json()
 
 
+@credential_safe
 class ConversationAnalytics:
     """Conversation analytics with enterprise features."""
 

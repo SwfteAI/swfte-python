@@ -19,6 +19,7 @@ from enum import Enum
 import requests
 
 from .. import _http
+from .._privacy import credential_safe
 try:
     import websocket
     HAS_WEBSOCKET = True
@@ -84,6 +85,7 @@ class EventSubscription:
 # Real-time Analytics
 # =============================================================================
 
+@credential_safe
 class RealtimeAnalytics:
     """
     Real-time analytics with live streaming.
@@ -440,6 +442,7 @@ class RealtimeAnalytics:
 # Analytics Stream
 # =============================================================================
 
+@credential_safe
 class AnalyticsStream:
     """
     Managed event stream with callback.
@@ -532,6 +535,7 @@ class AnalyticsStream:
 # Live Dashboard
 # =============================================================================
 
+@credential_safe
 class LiveDashboard:
     """
     Real-time dashboard with live updates.

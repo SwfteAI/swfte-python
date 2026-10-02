@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 import requests
 from . import _http
+from ._privacy import credential_safe
 from .exceptions import APIError, AuthenticationError
 
 
@@ -238,6 +239,7 @@ class Model:
         )
 
 
+@credential_safe
 class Models:
     """Models listing resource."""
     
@@ -290,4 +292,3 @@ class Models:
             raise APIError(f"API error: {response.status_code} - {response.text}")
         
         return Model.from_dict(response.json())
-

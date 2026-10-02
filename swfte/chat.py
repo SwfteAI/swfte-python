@@ -6,10 +6,12 @@ import json
 from typing import List, Dict, Any, Optional, Union, Iterator
 import requests
 from . import _http
+from ._privacy import credential_safe
 from .models import ChatCompletion, ChatCompletionChunk, Message
 from .exceptions import APIError, RateLimitError, AuthenticationError
 
 
+@credential_safe
 class Completions:
     """Chat completions resource."""
     
@@ -129,34 +131,42 @@ class Completions:
         # Use the dedicated streaming endpoint
         stream_url = url.replace("/chat/completions", "/chat/completions/stream")
 
-        response = _http.post(
-            stream_url,
-            json=payload,
-            headers=headers,
-            timeout=self.client.timeout,
-            stream=True,
-        )
-        
-        if response.status_code in (401, 403):
-            raise AuthenticationError("Invalid API key")
-        elif response.status_code == 429:
-            raise RateLimitError("Rate limit exceeded")
-        elif response.status_code >= 400:
-            raise APIError(f"API error: {response.status_code}", status_code=response.status_code)
-        
-        for line in response.iter_lines():
-            if line:
+        response = None
+        try:
+            response = _http.post(
+                stream_url,
+                json=payload,
+                headers=headers,
+                timeout=self.client.timeout,
+                stream=True,
+            )
+
+            if response.status_code in (401, 403):
+                raise AuthenticationError("Invalid API key")
+            elif response.status_code == 429:
+                raise RateLimitError("Rate limit exceeded")
+            elif response.status_code >= 400:
+                raise APIError(f"API error: {response.status_code}", status_code=response.status_code)
+
+            for line in response.iter_lines():
+                if not line:
+                    continue
                 line = line.decode("utf-8")
-                # Handle both "data:" and "data: " formats
-                if line.startswith("data:"):
-                    data = line[5:].lstrip()  # Remove "data:" and any leading whitespace
-                    if data == "[DONE]":
-                        break
-                    try:
-                        chunk_data = json.loads(data)
-                        yield ChatCompletionChunk.from_dict(chunk_data)
-                    except json.JSONDecodeError:
-                        continue
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].lstrip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk_data = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(chunk_data, dict) and chunk_data.get("error"):
+                    raise APIError("Chat stream returned an error", status_code=500, body=chunk_data)
+                yield ChatCompletionChunk.from_dict(chunk_data)
+        finally:
+            if response is not None:
+                response.close()
 
 
 class Chat:

@@ -9,6 +9,7 @@ from enum import Enum
 import requests
 
 from . import _http
+from ._privacy import credential_safe
 from ._base import _raise_for_status
 
 
@@ -109,6 +110,7 @@ class OAuthToken:
         )
 
 
+@credential_safe
 class Secrets:
     """
     Secret management API for storing and managing API keys, OAuth tokens, and MCP tokens.
@@ -475,4 +477,3 @@ class Secrets:
         url = f"{self._get_base_url()}/{secret_id}/rotate"
         response = self._make_request("POST", url, data=payload)
         return Secret.from_dict(response)
-

@@ -5,9 +5,11 @@ Audio API (transcription and text-to-speech).
 from typing import Optional, Literal
 import requests
 from . import _http
+from ._privacy import credential_safe
 from .exceptions import APIError, AuthenticationError
 
 
+@credential_safe
 class Transcriptions:
     """Audio transcription resource."""
     
@@ -84,6 +86,7 @@ class Transcriptions:
         return {"text": response.text}
 
 
+@credential_safe
 class Speech:
     """Text-to-speech resource."""
     
@@ -156,4 +159,3 @@ class Audio:
         self.client = client
         self.transcriptions = Transcriptions(client)
         self.speech = Speech(client)
-

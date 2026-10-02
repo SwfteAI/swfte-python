@@ -6,12 +6,14 @@ import os
 import warnings
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
+from weakref import WeakKeyDictionary
 
 import requests
 
 from . import _http
 from ._base import _service_root
 from ._version import __version__
+from ._privacy import credential_safe, redact_diagnostic
 
 from .agent_wizard import AgentWizard
 from .agents import Agents
@@ -41,6 +43,7 @@ from .workflows import Workflows
 
 
 _LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+_CREDENTIALS = WeakKeyDictionary()
 
 
 def _warn_if_insecure(url: str, what: str) -> None:
@@ -55,6 +58,7 @@ def _warn_if_insecure(url: str, what: str) -> None:
         )
 
 
+@credential_safe
 class SwfteClient:
     """
     Swfte API client for accessing AI models, agents, workflows, chatflows,
@@ -95,11 +99,12 @@ class SwfteClient:
         workspace_id: Optional[str] = None,
         api_base_url: Optional[str] = None,
     ):
-        self.api_key = api_key or os.environ.get("SWFTE_API_KEY")
-        if not self.api_key:
+        credential = api_key or os.environ.get("SWFTE_API_KEY")
+        if not credential:
             raise ValueError(
                 "API key is required. Pass api_key parameter or set SWFTE_API_KEY environment variable."
             )
+        self.api_key = credential
 
         self.base_url = base_url.rstrip("/")
         explicit_api_base = api_base_url or os.environ.get("SWFTE_API_BASE_URL")
@@ -139,6 +144,22 @@ class SwfteClient:
         self._cost_control = None
         self._agent_wizard = None
         self._catalog = None
+
+    @property
+    def api_key(self) -> str:
+        """Explicit credential access, retained for compatibility; avoid logging it."""
+        return _CREDENTIALS[self]
+
+    @api_key.setter
+    def api_key(self, value: str) -> None:
+        _CREDENTIALS[self] = value
+
+    def __repr__(self) -> str:
+        return redact_diagnostic("SwfteClient(base_url={!r}, api_base_url={!r}, api_key='[REDACTED]')".format(
+            self.base_url, self.api_base_url), self.api_key)
+
+    def __reduce_ex__(self, protocol):
+        raise TypeError("SwfteClient cannot be pickled; create a new client with an explicit credential")
 
     # ---- existing resources -------------------------------------------------
 

@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 import requests
 from .. import _http
+from .._privacy import credential_safe
 import json
 
 
@@ -183,6 +184,7 @@ class AlertPolicy:
 # Alert Manager
 # =============================================================================
 
+@credential_safe
 class AlertManager:
     """
     Enterprise alert management.
@@ -589,6 +591,7 @@ class AlertManager:
 # Webhook Manager
 # =============================================================================
 
+@credential_safe
 class WebhookManager:
     """Manage webhook destinations."""
 
@@ -694,6 +697,7 @@ class WebhookManager:
 # Slack Manager
 # =============================================================================
 
+@credential_safe
 class SlackManager:
     """Manage Slack integrations."""
 
@@ -784,6 +788,7 @@ class SlackManager:
 # PagerDuty Manager
 # =============================================================================
 
+@credential_safe
 class PagerDutyManager:
     """Manage PagerDuty integrations."""
 
@@ -858,6 +863,7 @@ class PagerDutyManager:
 # Escalation Manager
 # =============================================================================
 
+@credential_safe
 class EscalationManager:
     """Manage escalation policies."""
 
@@ -944,6 +950,7 @@ class EscalationManager:
 # Policy Manager
 # =============================================================================
 
+@credential_safe
 class PolicyManager:
     """Manage notification policies."""
 

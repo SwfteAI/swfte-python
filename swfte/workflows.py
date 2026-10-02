@@ -10,6 +10,7 @@ from urllib.parse import quote
 import requests
 
 from . import _http
+from ._privacy import credential_safe
 from ._base import _raise_for_status
 import time
 
@@ -336,6 +337,7 @@ class ValidationResult:
         )
 
 
+@credential_safe
 class Workflows:
     """
     Workflow management API for creating, executing, and managing workflows.
@@ -924,8 +926,6 @@ class Workflows:
         """
         url = f"{self._get_base_url()}/{workflow_id}/agent/{agent_id}"
         self._make_request("DELETE", url)
-
-
 
 
 

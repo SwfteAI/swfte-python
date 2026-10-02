@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import requests
 
 from . import _http
+from ._privacy import credential_safe
 from ._base import _raise_for_status
 
 
@@ -100,6 +101,7 @@ class MessagePage:
         )
 
 
+@credential_safe
 class Conversations:
     """
     Conversation management API for storing and managing conversation history.
@@ -390,5 +392,3 @@ class Conversations:
         """
         url = f"{self._get_base_url()}/{conversation_id}/messages"
         self._make_request("DELETE", url)
-
-

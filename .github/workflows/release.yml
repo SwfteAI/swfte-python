@@ -74,13 +74,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          # A re-used version fails at upload with a confusing 400. Say so here.
-          code=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/swfte-sdk/$VERSION/json")
-          if [ "$code" = "200" ]; then
-            echo "::error title=Already published::swfte-sdk $VERSION exists on PyPI. Bump the version."
-            exit 1
-          fi
-          echo "swfte-sdk $VERSION is not on PyPI (HTTP $code)"
+          python scripts/check_pypi_version.py "$VERSION"
 
   build:
     name: build

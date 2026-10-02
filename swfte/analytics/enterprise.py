@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 import requests
 from .. import _http
+from .._privacy import credential_safe
 import json
 
 
@@ -363,6 +364,7 @@ class EnterpriseAnalytics:
 # Team Analytics
 # =============================================================================
 
+@credential_safe
 class TeamAnalytics:
     """Multi-user and team analytics."""
 
@@ -487,6 +489,7 @@ class TeamAnalytics:
 # Anomaly Detection
 # =============================================================================
 
+@credential_safe
 class AnomalyDetection:
     """ML-powered anomaly detection."""
 
@@ -612,6 +615,7 @@ class AnomalyDetection:
 # A/B Testing
 # =============================================================================
 
+@credential_safe
 class ABTestingAnalytics:
     """A/B testing framework for LLM experiments."""
 
@@ -735,6 +739,7 @@ class ABTestingAnalytics:
 # Compliance Reporting
 # =============================================================================
 
+@credential_safe
 class ComplianceReporting:
     """Compliance auditing and reporting."""
 
@@ -850,6 +855,7 @@ class ComplianceReporting:
 # Cost Optimization
 # =============================================================================
 
+@credential_safe
 class CostOptimization:
     """AI-powered cost optimization recommendations."""
 
@@ -959,6 +965,7 @@ class CostOptimization:
 # Model Comparison
 # =============================================================================
 
+@credential_safe
 class ModelComparison:
     """Model benchmarking and comparison analytics."""
 
@@ -1042,6 +1049,7 @@ class ModelComparison:
 # User Journey Analytics
 # =============================================================================
 
+@credential_safe
 class UserJourneyAnalytics:
     """User journey tracking and lifecycle analytics."""
 
@@ -1130,6 +1138,7 @@ class UserJourneyAnalytics:
 # RAG Quality Metrics
 # =============================================================================
 
+@credential_safe
 class RAGQualityMetrics:
     """RAG system quality and performance metrics."""
 
@@ -1212,6 +1221,7 @@ class RAGQualityMetrics:
 # Embedding Analytics
 # =============================================================================
 
+@credential_safe
 class EmbeddingAnalytics:
     """Embedding quality and usage analytics."""
 

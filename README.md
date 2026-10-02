@@ -360,7 +360,7 @@ management resources).
 ## Requirements
 
 - Python 3.8 or later
-- `requests` >= 2.28.0
+- `requests` >= 2.32.4
 
 ## Contributing
 
@@ -372,8 +372,10 @@ All contributors must sign the [Swfte CLA](https://cla.swfte.com) before their f
 
 - **API key handling.** Pass the key with `api_key=` or `SWFTE_API_KEY`; do not
   commit it. The key is sent only as an `Authorization: Bearer` header and is not
-  included in `repr(client)` or in the SDK's exception messages. The SDK does not
-  log.
+  retained in ordinary `vars(client)` or `repr(client)`, and SDK failure
+  diagnostics redact it. Clients cannot be pickled. Explicit `client.api_key`
+  access remains available for compatibility; avoid logging it or request headers.
+  Successful API values are returned unchanged. The SDK does not log.
 - **TLS.** Certificates are always verified. A `base_url` / `api_base_url` (or
   `SWFTE_API_BASE_URL`) that uses `http://` to a non-loopback host emits a
   `UserWarning`, because the key would travel in cleartext.

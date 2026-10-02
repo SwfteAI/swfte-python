@@ -17,6 +17,7 @@ import requests
 
 
 from .. import _http
+from .._privacy import credential_safe
 # =============================================================================
 # Enums
 # =============================================================================
@@ -320,6 +321,7 @@ class CustomMetrics:
 # Metrics Manager
 # =============================================================================
 
+@credential_safe
 class MetricsManager:
     """Manage custom metric definitions."""
 
@@ -446,6 +448,7 @@ class MetricsManager:
 # Dimensions Manager
 # =============================================================================
 
+@credential_safe
 class DimensionsManager:
     """Manage custom dimensions."""
 
@@ -543,6 +546,7 @@ class DimensionsManager:
 # Aggregations Manager
 # =============================================================================
 
+@credential_safe
 class AggregationsManager:
     """Manage pre-computed metric aggregations."""
 
@@ -624,6 +628,7 @@ class AggregationsManager:
 # Dashboards Manager
 # =============================================================================
 
+@credential_safe
 class DashboardsManager:
     """Manage custom dashboards."""
 

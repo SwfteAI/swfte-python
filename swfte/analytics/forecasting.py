@@ -17,6 +17,7 @@ import requests
 
 
 from .. import _http
+from .._privacy import credential_safe
 # =============================================================================
 # Enums
 # =============================================================================
@@ -111,6 +112,7 @@ class ScenarioResult:
 # Usage Forecaster
 # =============================================================================
 
+@credential_safe
 class UsageForecaster:
     """
     ML-powered usage forecasting.
@@ -222,6 +224,7 @@ class UsageForecaster:
 # Budget Predictor
 # =============================================================================
 
+@credential_safe
 class BudgetPredictor:
     """
     Budget forecasting and cost projections.
@@ -341,6 +344,7 @@ class BudgetPredictor:
 # Capacity Planner
 # =============================================================================
 
+@credential_safe
 class CapacityPlanner:
     """
     Capacity planning and resource recommendations.
@@ -432,6 +436,7 @@ class CapacityPlanner:
 # Trend Analyzer
 # =============================================================================
 
+@credential_safe
 class TrendAnalyzer:
     """
     Advanced trend analysis with seasonality detection.

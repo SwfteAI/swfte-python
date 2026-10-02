@@ -9,6 +9,7 @@ from enum import Enum
 import requests
 
 from . import _http
+from ._privacy import credential_safe
 from ._base import _raise_for_status
 import time
 
@@ -94,6 +95,7 @@ class HealthStatus:
         )
 
 
+@credential_safe
 class Deployments:
     """
     Deployment management API for RunPod GPU model deployments.
@@ -477,8 +479,6 @@ class Deployments:
         
         url = f"{self._get_base_url()}/images/generate"
         return self._make_request("POST", url, data=payload)
-
-
 
 
 

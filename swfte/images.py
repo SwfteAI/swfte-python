@@ -5,10 +5,12 @@ Image generation API.
 from typing import Optional, List, Literal
 import requests
 from . import _http
+from ._privacy import credential_safe
 from .models import ImageGenerationResponse
 from .exceptions import APIError, AuthenticationError
 
 
+@credential_safe
 class Images:
     """Image generation resource."""
     
@@ -137,4 +139,3 @@ class Images:
             raise APIError(f"API error: {response.status_code} - {response.text}")
         
         return ImageGenerationResponse.from_dict(response.json())
-
