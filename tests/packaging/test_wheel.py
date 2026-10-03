@@ -37,13 +37,13 @@ def _pyproject_version() -> str:
     return m.group(1)
 
 
-def test_every_module_in_the_wheel_parses_as_python_38(extracted):
+def test_every_module_in_the_wheel_parses_as_python_310(extracted):
     """Catches a syntax error like the stray quote that used to be in swfte/analytics.py."""
     dest, names = extracted
     py = [n for n in names if n.endswith(".py")]
     assert py
     for n in py:
-        ast.parse((dest / n).read_text(), filename=n, feature_version=8)
+        ast.parse((dest / n).read_text(), filename=n, feature_version=10)
 
 
 def test_every_module_in_the_wheel_imports(extracted):
@@ -78,12 +78,13 @@ def test_wheel_has_no_shadow_module_and_ships_py_typed(extracted):
     assert "swfte/py.typed" in names
 
 
-def test_wheel_preserves_mit_license_and_python_38_minimum(extracted):
+def test_wheel_preserves_mit_license_and_python_310_minimum_and_urllib3_floor(extracted):
     dest, names = extracted
     metadata_name = next(n for n in names if n.endswith(".dist-info/METADATA"))
     metadata = Parser().parsestr((dest / metadata_name).read_text())
     assert metadata["Name"] == "swfte-sdk"
-    assert metadata["Requires-Python"] == ">=3.8"
+    assert metadata["Requires-Python"] == ">=3.10"
+    assert "urllib3>=2.8.0" in metadata.get_all("Requires-Dist")
     assert "MIT License" in metadata["License"]
     license_names = [n for n in names if n.endswith("/LICENSE") and ".dist-info/" in n]
     assert len(license_names) == 1

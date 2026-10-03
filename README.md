@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/swfte-sdk.svg)](https://pypi.org/project/swfte-sdk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 The official Python SDK for [**Swfte**](https://www.swfte.com) — the unified AI infrastructure platform giving teams one API for **200+ models** from OpenAI, Anthropic, Google, Mistral, Meta and self-hosted GPU deployments, plus production-grade [agents](https://www.swfte.com/products/agents), [workflows](https://www.swfte.com/products/workflows), [chatflows](https://www.swfte.com/products/chatflows), [RAG](https://www.swfte.com/products/rag), [voice](https://www.swfte.com/products/voice), and [MCP servers](https://www.swfte.com/products/mcp).
 
@@ -359,8 +359,9 @@ management resources).
 
 ## Requirements
 
-- Python 3.8 or later
+- Python 3.10 or later
 - `requests` >= 2.32.4
+- `urllib3` >= 2.8.0
 
 ## Contributing
 

@@ -57,13 +57,23 @@ def test_requests_floor_is_patched():
     assert '"requests>=2.32.4"' in text
 
 
-def test_build_contract_and_ci_preserve_advertised_python_38():
+def test_urllib3_floor_is_patched_and_python_39_is_not_advertised():
+    """GHSA-vxq7-64xx-v4gw is fixed only in urllib3 2.8.0, which needs Python >= 3.10."""
+    text = (ROOT / "pyproject.toml").read_text()
+    assert '"urllib3>=2.8.0"' in text
+    assert "Programming Language :: Python :: 3.8" not in text
+    assert "Programming Language :: Python :: 3.9" not in text
+    assert "Programming Language :: Python :: 3.10" in text
+
+
+def test_build_contract_and_ci_advertise_python_310_floor():
     text = (ROOT / "pyproject.toml").read_text()
     assert '"setuptools>=68.0.0,<77"' in text
     assert 'license = {file = "LICENSE"}' in text
     assert not re.search(r"^license-files\s*=", text, re.M)
-    assert 'requires-python = ">=3.8"' in text
-    assert "python-version: ['3.8', '3.9'" in CI
+    assert 'requires-python = ">=3.10"' in text
+    assert "python-version: ['3.10', '3.11'" in CI
+    assert "'3.8'" not in CI and "'3.9'" not in CI
     assert "python -m build" in CI
     assert "python -m twine check" in CI
 

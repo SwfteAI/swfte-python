@@ -22,11 +22,11 @@ Changes and source evidence:
   inventory is `tests/post_transport_inventory.json`. There is no direct
   Requests send or custom Requests session remaining outside the guard.
   Websocket behavior is outside this HTTP POST leaf.
-- `pyproject.toml` keeps Python >=3.8 and the patched Requests >=2.32.4 floor,
+- `pyproject.toml` requires Python >=3.10 (owner decision 2026-10-03), the
+  patched Requests >=2.32.4 and urllib3 >=2.8.0 (GHSA-vxq7-64xx-v4gw) floors,
   uses setuptools >=68,<77, and supplies the MIT LICENSE through legacy
-  PEP 621 file metadata. Root independently resolved Requests 2.32.4 and
-  dependencies on CPython 3.8.20; full artifact proof is still pending.
-- PR CI explicitly has `contents: read`, includes Python 3.8 and builds
+  PEP 621 file metadata.
+- PR CI explicitly has `contents: read`, tests Python 3.10-3.13 and builds
   wheel/sdist before packaging tests. Existing release SHA pins, OIDC jobs and
   publish guards were preserved.
 - Old expectations now describe generic connection refusal as non-retriable.
@@ -62,17 +62,11 @@ Run these as separate inspected commands, preserving direct exit statuses:
 .venv/bin/python -m build
 .venv/bin/python -m twine check dist/*
 .venv/bin/python -m pytest -q tests/packaging
-/private/tmp/swfte-p5-resume-20261001/python38-proof/bin/python tests/packaging/check_python38_artifacts.py
 .venv/bin/python tests/run_post_replay_mutations.py
 ```
 
-The real 3.8 artifact helper refuses newer interpreters, builds both artifacts
-through isolated backend resolution, verifies exact MIT LICENSE bytes and
-Requires-Python metadata, and installs each into a separate fresh 3.8 consumer.
-Each consumer imports every installed module under `-I`; success requires both
-consumer counts and `PY38_WHEEL_SDIST_INSTALL_PASSED`. It needs build frontend,
-venv/pip and approved dependency resolution. A syntax parse alone is not 3.8
-installation proof.
+The former 3.8 artifact helper was removed with the 3.10 floor; the packaging
+tests assert `Requires-Python: >=3.10` and the urllib3 floor in wheel metadata.
 
 Literal guard matrix: `tests/post_replay_mutations.json` (12 mutants).
 Every anchor was inspected and matched exactly once; no mutant was executed.
@@ -95,7 +89,7 @@ Four source passes:
    licensing, release job boundaries and exact source ownership. No additional
    source defect remained in this pass.
 
-Remaining owner work: execute all native and compatibility gates, genuine 3.8
-artifact/consumer proof and the 12 baseline/killed/restored cycles; independently
+Remaining owner work: execute all native and compatibility gates and the 12
+baseline/killed/restored cycles; independently
 inspect final diff/tip and publish only through the driver's authorized PR flow.
 No runtime pass or release readiness is claimed here.

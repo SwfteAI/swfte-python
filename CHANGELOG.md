@@ -16,6 +16,15 @@ Versions 1.0.x and 1.1.x were never published; 1.2.0 supersedes them.
   `InvalidRequestError` when the client is constructed (`base_url`, `api_base_url`
   and `SWFTE_API_BASE_URL`), matching the Node SDK. `http://` stays valid for
   `localhost`, `127.0.0.1` and `::1`; everything else must use `https://`.
+- `urllib3>=2.8.0` is now a direct requirement (GHSA-vxq7-64xx-v4gw, unbounded
+  chunk-size line buffering in `HTTPResponse.stream()`/`read_chunked()`).
+
+### Breaking
+
+- **Python 3.10 or later is required.** `urllib3>=2.8.0`, which carries the fix
+  above, does not support Python 3.8 or 3.9. The package metadata
+  (`Requires-Python: >=3.10`) makes pip refuse to install it there; upgrade the
+  interpreter. 3.8 and 3.9 are removed from the CI matrix and classifiers.
 
 ### Fixed
 
