@@ -389,7 +389,7 @@ class TestPausedRunsReturnEarly:
         assert res.paused is True
         assert res.status == ExecutionStatus.PAUSED
         assert res.waiting_for == []
-        with patch("requests.request", side_effect=[resp({"executionId": "ex_2"}, 202), resp(status_body("SUCCEEDED"))]):
+        with patch("requests.request", side_effect=[resp({"executionId": "ex_2"}, 202), resp(status_body("SUCCEEDED", executionId="ex_2"))]):
             ok = client.workflows.invoke_and_wait("wf_1", poll_interval=0.001)
         assert ok.paused is False
 
