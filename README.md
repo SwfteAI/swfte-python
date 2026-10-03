@@ -377,8 +377,10 @@ All contributors must sign the [Swfte CLA](https://cla.swfte.com) before their f
   access remains available for compatibility; avoid logging it or request headers.
   Successful API values are returned unchanged. The SDK does not log.
 - **TLS.** Certificates are always verified. A `base_url` / `api_base_url` (or
-  `SWFTE_API_BASE_URL`) that uses `http://` to a non-loopback host emits a
-  `UserWarning`, because the key would travel in cleartext.
+  `SWFTE_API_BASE_URL`) that uses `http://` to a non-loopback host raises
+  `InvalidRequestError` when the client is constructed, because the key would
+  travel in cleartext. `http://` is accepted only for `localhost`, `127.0.0.1`
+  and `::1`.
 - **Retries.** Only `chat.completions.create` (non-streaming) retries, up to
   `max_retries` attempts, and only after `ConnectTimeout` before the request body
   was sent. Generic `ConnectionError` can mean a lost response after the server

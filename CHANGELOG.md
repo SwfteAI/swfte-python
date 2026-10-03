@@ -12,7 +12,10 @@ Versions 1.0.x and 1.1.x were never published; 1.2.0 supersedes them.
   SHA; the GitHub Release step runs in its own job; publishing only runs from `main`.
 - `requests>=2.32.4` (the old `>=2.28.0` floor allowed versions with known CVEs,
   e.g. the netrc credential leak fixed in 2.32.4).
-- `http://` base URLs to non-loopback hosts now emit a `UserWarning`.
+- **Behaviour change:** `http://` base URLs to non-loopback hosts now raise
+  `InvalidRequestError` when the client is constructed (`base_url`, `api_base_url`
+  and `SWFTE_API_BASE_URL`), matching the Node SDK. `http://` stays valid for
+  `localhost`, `127.0.0.1` and `::1`; everything else must use `https://`.
 
 ### Fixed
 

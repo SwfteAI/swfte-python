@@ -11,7 +11,7 @@ import requests
 
 from swfte import SwfteClient
 from swfte.agents import AgentChatResponse
-from swfte.exceptions import APIError, AuthenticationError, RateLimitError
+from swfte.exceptions import APIError, AuthenticationError, InvalidRequestError, RateLimitError
 
 
 class _Server:
@@ -139,17 +139,64 @@ class TestV2ResourceTypedErrors:
             client.agents.get("nope")
 
 
-class TestCleartextBaseUrlWarning:
-    def test_http_non_loopback_warns(self):
-        with pytest.warns(UserWarning, match="cleartext"):
+class TestCleartextBaseUrlRejected:
+    """Same rule as swfte-node assertSecureUrl: https anywhere, http only for loopback."""
+
+    def test_http_non_loopback_base_url_raises(self, monkeypatch):
+        monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
+        with pytest.raises(InvalidRequestError, match="base_url must use https"):
             SwfteClient(api_key="k", base_url="http://api.example.test/agents/v2/gateway")
 
-    def test_https_and_loopback_do_not_warn(self):
+    def test_http_non_loopback_api_base_url_raises(self, monkeypatch):
+        monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
+        with pytest.raises(InvalidRequestError, match="api_base_url must use https"):
+            SwfteClient(api_key="k", api_base_url="http://api.example.test/agents")
+
+    def test_http_non_loopback_env_api_base_url_raises(self, monkeypatch):
+        monkeypatch.setenv("SWFTE_API_BASE_URL", "http://api.example.test/agents")
+        with pytest.raises(InvalidRequestError, match="api_base_url must use https"):
+            SwfteClient(api_key="k")
+
+    def test_lookalike_hosts_and_other_schemes_raise(self, monkeypatch):
+        monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
+        for url in (
+            "http://localhost.evil.test/v2/gateway",
+            "http://127.0.0.1.evil.test",
+            "http://notlocalhost:8080",
+            "ftp://example.test",
+            "ws://localhost:8080",
+        ):
+            with pytest.raises(InvalidRequestError, match="must use https"):
+                SwfteClient(api_key="k", base_url=url)
+
+    def test_unparseable_url_raises(self, monkeypatch):
+        monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
+        for url in ("not url", "api.example.test/v2/gateway", ""):
+            with pytest.raises(InvalidRequestError, match="base_url is not a valid URL"):
+                SwfteClient(api_key="k", base_url=url)
+
+    def test_message_names_scheme_and_host_only(self, monkeypatch):
+        monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
+        with pytest.raises(InvalidRequestError) as raised:
+            SwfteClient(
+                api_key="sk-swfte-cleartext-key",
+                base_url="http://user:hunter2@api.example.test:8080/v2/gateway?token=abc",
+            )
+        message = str(raised.value)
+        assert "http://api.example.test:8080" in message
+        for secret in ("hunter2", "user", "token", "abc", "sk-swfte-cleartext-key", "/v2/gateway"):
+            assert secret not in message
+
+    def test_https_and_loopback_http_construct_without_warning(self, monkeypatch):
+        monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             SwfteClient(api_key="k")
-            SwfteClient(api_key="k", base_url="http://localhost:8080/agents/v2/gateway")
-            SwfteClient(api_key="k", base_url="http://127.0.0.1:8080/agents/v2/gateway")
+            SwfteClient(api_key="k", base_url="https://api.example.test/agents/v2/gateway")
+            for host in ("localhost", "127.0.0.1", "[::1]", "LOCALHOST"):
+                client = SwfteClient(api_key="k", base_url=f"http://{host}:8080/agents/v2/gateway")
+                assert client.api_base_url == f"http://{host}:8080/agents"
+            SwfteClient(api_key="k", api_base_url="http://localhost:8080")
 
 
 class TestUserAgentVersion:

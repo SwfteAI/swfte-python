@@ -3,7 +3,6 @@ Main client class for the Swfte SDK.
 """
 
 import os
-import warnings
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 from weakref import WeakKeyDictionary
@@ -29,7 +28,7 @@ from .datasets import Datasets
 from .deployments import Deployments
 from .documents import Documents
 from .embeddings import Embeddings
-from .exceptions import APIError, AuthenticationError, RateLimitError, SwfteError
+from .exceptions import APIError, AuthenticationError, InvalidRequestError, RateLimitError, SwfteError
 from .files import Files
 from .images import Images
 from .marketplace import Marketplace
@@ -46,16 +45,28 @@ _LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
 _CREDENTIALS = WeakKeyDictionary()
 
 
-def _warn_if_insecure(url: str, what: str) -> None:
-    """Warn when the Bearer key would travel over cleartext http:// to a non-loopback host."""
-    parsed = urlparse(url)
-    if parsed.scheme == "http" and (parsed.hostname or "") not in _LOOPBACK_HOSTS:
-        warnings.warn(
-            f"{what} uses http:// ({parsed.hostname}); your API key is sent in cleartext. "
-            "Use https:// (http:// is only safe for localhost).",
-            UserWarning,
-            stacklevel=3,
-        )
+def _require_secure_url(url: str, what: str) -> None:
+    """Bearer credentials only travel over https; http is allowed for loopback hosts only.
+
+    Same rule as swfte-node's ``assertSecureUrl``. The message names only the scheme
+    and host (never userinfo, path or query), so it cannot echo a credential.
+    """
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+    except ValueError:
+        raise InvalidRequestError(f"{what} is not a valid URL") from None
+    if not parsed.scheme:
+        raise InvalidRequestError(f"{what} is not a valid URL")
+    if parsed.scheme == "https":
+        return
+    if parsed.scheme == "http" and hostname in _LOOPBACK_HOSTS:
+        return
+    host = parsed.netloc.rpartition("@")[2]
+    raise InvalidRequestError(
+        f"{what} must use https (http is allowed only for localhost, 127.0.0.1 and ::1); "
+        f"got {parsed.scheme}://{host}"
+    )
 
 
 @credential_safe
@@ -79,6 +90,10 @@ class SwfteClient:
             Defaults to SWFTE_API_BASE_URL, else ``base_url`` with its trailing
             ``/v2/gateway``, ``/v1/gateway`` or ``/gateway`` removed
             (https://api.swfte.com/agents by default).
+
+    Raises:
+        InvalidRequestError: ``base_url`` or ``api_base_url`` is not https (http is
+            accepted only for localhost, 127.0.0.1 and ::1) or is not a valid URL.
 
     Example:
         client = SwfteClient(api_key="sk-swfte-...")
@@ -111,8 +126,8 @@ class SwfteClient:
         self.api_base_url = (
             explicit_api_base.rstrip("/") if explicit_api_base else _service_root(self.base_url)
         )
-        _warn_if_insecure(self.base_url, "base_url")
-        _warn_if_insecure(self.api_base_url, "api_base_url")
+        _require_secure_url(self.base_url, "base_url")
+        _require_secure_url(self.api_base_url, "api_base_url")
         self.timeout = timeout
         self.max_retries = max_retries
         self.workspace_id = workspace_id or os.environ.get("SWFTE_WORKSPACE_ID")
