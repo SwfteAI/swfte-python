@@ -101,7 +101,7 @@ from .modules import Modules
 from .rag import Rag
 from .voice_calls import VoiceCalls
 
-__version__ = "1.1.0"
+from ._version import __version__  # noqa: E402
 
 __all__ = [
     # Client

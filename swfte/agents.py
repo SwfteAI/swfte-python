@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 from urllib.parse import quote
 import requests
 
+from . import _http
+from ._privacy import credential_safe
+from ._base import _raise_for_status
+
 from .exceptions import InvalidRequestError
 
 #: ``user_id`` used by :meth:`Agents.chat` when none is given. The agents
@@ -41,9 +45,10 @@ class AgentChatResponse:
     @classmethod
     def from_dict(cls, data: Optional[Dict[str, Any]]) -> "AgentChatResponse":
         data = data if isinstance(data, dict) else {}
-        reply = data.get("response")
+        # agents-service returns ``content``; ``response`` is accepted as a fallback.
+        reply = data.get("content")
         if reply is None:
-            reply = data.get("content")
+            reply = data.get("response")
         if reply is None:
             reply = ""
         if not isinstance(reply, str):
@@ -128,6 +133,7 @@ class Agent:
         }
 
 
+@credential_safe
 class Agents:
     """
     Agent management API for creating, updating, and managing AI agents.
@@ -179,7 +185,7 @@ class Agents:
         """Make an HTTP request."""
         headers = self._client._get_headers()
         
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,
@@ -188,7 +194,7 @@ class Agents:
             timeout=self._client.timeout,
         )
         
-        response.raise_for_status()
+        _raise_for_status(response, method, url)
         
         if response.content:
             return response.json()
@@ -460,4 +466,3 @@ class Agents:
             json=body,
         )
         return AgentChatResponse.from_dict(raw)
-

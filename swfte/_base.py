@@ -8,6 +8,10 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from . import _http
+from ._privacy import credential_safe
+from .exceptions import AuthenticationError, RateLimitError
+
 
 def _service_root(base_url: str) -> str:
     """
@@ -21,6 +25,17 @@ def _service_root(base_url: str) -> str:
     return base
 
 
+def _raise_for_status(response: Any, method: str, url: str) -> None:
+    """Map 401/403 -> AuthenticationError and 429 -> RateLimitError; any other
+    HTTP error still raises ``requests.HTTPError`` as before."""
+    if response.status_code in (401, 403):
+        raise AuthenticationError(f"API error: {response.status_code} {method} {url}")
+    if response.status_code == 429:
+        raise RateLimitError(f"Rate limit exceeded: {method} {url}")
+    response.raise_for_status()
+
+
+@credential_safe
 class V2Resource:
     """
     Base class for V2 resource clients.
@@ -70,7 +85,7 @@ class V2Resource:
             # let requests build the multipart boundary
             headers.pop("Content-Type", None)
 
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,
@@ -81,7 +96,7 @@ class V2Resource:
             timeout=self._client.timeout,
             stream=stream,
         )
-        response.raise_for_status()
+        _raise_for_status(response, method, url)
 
         if stream:
             return response

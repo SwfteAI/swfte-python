@@ -1,8 +1,8 @@
 # Swfte Python SDK
 
-[![PyPI version](https://img.shields.io/pypi/v/swfte.svg)](https://pypi.org/project/swfte/)
+[![PyPI version](https://img.shields.io/pypi/v/swfte-sdk.svg)](https://pypi.org/project/swfte-sdk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 The official Python SDK for [**Swfte**](https://www.swfte.com) — the unified AI infrastructure platform giving teams one API for **200+ models** from OpenAI, Anthropic, Google, Mistral, Meta and self-hosted GPU deployments, plus production-grade [agents](https://www.swfte.com/products/agents), [workflows](https://www.swfte.com/products/workflows), [chatflows](https://www.swfte.com/products/chatflows), [RAG](https://www.swfte.com/products/rag), [voice](https://www.swfte.com/products/voice), and [MCP servers](https://www.swfte.com/products/mcp).
 
@@ -24,7 +24,7 @@ Read the full company profile in [ABOUT.md](ABOUT.md), or visit [swfte.com](http
 
 ### Other official Swfte SDKs
 
-- [swfte-python](https://github.com/SwfteAI/swfte-python) — Python SDK ([PyPI](https://pypi.org/project/swfte/))
+- [swfte-python](https://github.com/SwfteAI/swfte-python) — Python SDK ([PyPI](https://pypi.org/project/swfte-sdk/))
 - [swfte-node](https://github.com/SwfteAI/swfte-node) — Node.js / TypeScript SDK ([npm](https://www.npmjs.com/package/@swfte/sdk))
 - [swfte-java](https://github.com/SwfteAI/swfte-java) — Java SDK ([Maven Central](https://search.maven.org/artifact/com.swfte/swfte-sdk))
 - [swfte-chat-widget](https://github.com/SwfteAI/swfte-chat-widget) — embeddable chat widget ([npm](https://www.npmjs.com/package/@swfte/chat-widget))
@@ -298,7 +298,7 @@ client = SwfteClient(
     api_key="sk-swfte-...",           # Required. Also reads SWFTE_API_KEY env var.
     base_url="https://api.swfte.com/agents/v2/gateway",  # Default
     timeout=60,                        # Request timeout in seconds
-    max_retries=3,                     # Retry count for failed requests
+    max_retries=3,                     # Chat attempts after a pre-send connect timeout only
     workspace_id="ws-...",             # Workspace scoping. Also reads SWFTE_WORKSPACE_ID.
     # api_base_url="https://api.swfte.com/agents",  # Optional; derived from base_url
 )
@@ -310,7 +310,7 @@ client = SwfteClient(
 | `base_url` | `str` | `https://api.swfte.com/agents/v2/gateway` | Gateway URL (chat completions, images, embeddings, audio, models) |
 | `api_base_url` | `str` | `SWFTE_API_BASE_URL` env, else `base_url` minus `/v2/gateway`, `/v1/gateway` or `/gateway` | agents-service root used by agents, workflows, catalog and the other management resources |
 | `timeout` | `int` | `60` | Request timeout (seconds) |
-| `max_retries` | `int` | `3` | Max retry attempts |
+| `max_retries` | `int` | `3` | Attempts for non-streaming chat only after `requests.exceptions.ConnectTimeout`, which occurs before sending. Generic connection errors, read timeouts, HTTP errors and all other calls are never retried. Values below 1 mean one attempt |
 | `workspace_id` | `str` | `SWFTE_WORKSPACE_ID` env | Workspace ID |
 
 ## Error Handling
@@ -343,8 +343,10 @@ except APIError as e:
 | `WorkflowExecutionError` | `invoke_and_wait` / `wait_for_completion`: the run ended FAILED, TIMEOUT or CANCELLED/CANCELED (also a `RuntimeError`) |
 | `WorkflowTimeoutError` | `invoke_and_wait` / `wait_for_completion`: gave up polling; the run is not cancelled (also a `TimeoutError`) |
 
-`agents.chat`, `workflows.invoke*`, `get_execution_status` and `catalog.*` map
-401/403 to `AuthenticationError` and 429 to `RateLimitError`, and are never retried.
+Every call maps 401/403 to `AuthenticationError` and 429 to `RateLimitError`.
+Other HTTP errors are `APIError` (chat, `agents.chat`, `workflows.invoke*`,
+`get_execution_status`, `catalog.*`) or `requests.HTTPError` (the remaining
+management resources).
 
 ## Supported Providers
 
@@ -357,8 +359,9 @@ except APIError as e:
 
 ## Requirements
 
-- Python 3.8 or later
-- `requests` >= 2.28.0
+- Python 3.10 or later
+- `requests` >= 2.32.4
+- `urllib3` >= 2.8.0
 
 ## Contributing
 
@@ -368,7 +371,30 @@ All contributors must sign the [Swfte CLA](https://cla.swfte.com) before their f
 
 ## Security
 
-To report a vulnerability, please see [SECURITY.md](SECURITY.md). Do not open a public issue for security concerns.
+- **API key handling.** Pass the key with `api_key=` or `SWFTE_API_KEY`; do not
+  commit it. The key is sent only as an `Authorization: Bearer` header and is not
+  retained in ordinary `vars(client)` or `repr(client)`, and SDK failure
+  diagnostics redact it. Clients cannot be pickled. Explicit `client.api_key`
+  access remains available for compatibility; avoid logging it or request headers.
+  Successful API values are returned unchanged. The SDK does not log.
+- **TLS.** Certificates are always verified. A `base_url` / `api_base_url` (or
+  `SWFTE_API_BASE_URL`) that uses `http://` to a non-loopback host raises
+  `InvalidRequestError` when the client is constructed, because the key would
+  travel in cleartext. `http://` is accepted only for `localhost`, `127.0.0.1`
+  and `::1`.
+- **Retries.** Only `chat.completions.create` (non-streaming) retries, up to
+  `max_retries` attempts, and only after `ConnectTimeout` before the request body
+  was sent. Generic `ConnectionError` can mean a lost response after the server
+  already executed the call; it is never retried. Read timeouts, HTTP errors
+  (including 401/403/429/5xx) and every other call are
+  not retried, so a call that may already have run is never repeated.
+- **Timeouts.** Every request has a timeout (`timeout`, 60 seconds by default).
+- **Redirects.** SDK requests never follow redirects, including 302 and 307.
+  A redirect raises `APIError` with its HTTP status and response body. Stripping
+  `Authorization` alone would still forward prompts, files or audio on 307/308.
+  Configure the final endpoint URL directly instead of depending on redirects.
+
+Report vulnerabilities to security@swfte.com (see [SECURITY.md](SECURITY.md)).
 
 ## License
 
@@ -388,7 +414,7 @@ Copyright (c) 2024-2026 Swfte, Inc.
 
 ### Other official Swfte SDKs
 
-- [swfte-python](https://github.com/SwfteAI/swfte-python) — this repo ([PyPI](https://pypi.org/project/swfte/))
+- [swfte-python](https://github.com/SwfteAI/swfte-python) — this repo ([PyPI](https://pypi.org/project/swfte-sdk/))
 - [swfte-node](https://github.com/SwfteAI/swfte-node) — Node.js / TypeScript SDK ([npm](https://www.npmjs.com/package/@swfte/sdk))
 - [swfte-java](https://github.com/SwfteAI/swfte-java) — Java SDK ([Maven Central](https://search.maven.org/artifact/com.swfte/swfte-sdk))
 - [swfte-chat-widget](https://github.com/SwfteAI/swfte-chat-widget) — embeddable chat widget ([npm](https://www.npmjs.com/package/@swfte/chat-widget))

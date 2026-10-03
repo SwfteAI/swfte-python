@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68.0.0,<77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "swfte-sdk"
-version = "1.1.1"
+version = "1.2.0"
 description = "Official Python SDK for Swfte — unified API for 200+ AI models, agents, workflows, chatflows, RAG, voice and MCP. https://www.swfte.com"
 readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.8"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
 authors = [
     {name = "Swfte, Inc.", email = "sdk@swfte.com"}
 ]
@@ -16,11 +16,8 @@ keywords = ["ai", "llm", "openai", "anthropic", "gemini", "sdk", "api"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -30,7 +27,8 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "requests>=2.28.0",
+    "requests>=2.32.4",
+    "urllib3>=2.8.0",
     "typing-extensions>=4.0.0",
 ]
 
@@ -70,18 +68,18 @@ swfte = ["py.typed"]
 
 [tool.black]
 line-length = 100
-target-version = ["py38", "py39", "py310", "py311", "py312", "py313"]
+target-version = ["py310", "py311", "py312", "py313"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 strict = true

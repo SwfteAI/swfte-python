@@ -1,6 +1,57 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 - 2026-09-30
+
+First release published to PyPI (`pip install swfte-sdk`; import name `swfte`).
+Versions 1.0.x and 1.1.x were never published; 1.2.0 supersedes them.
+
+### Security
+
+- Release workflow publishes with PyPI Trusted Publishing (OIDC) and no longer
+  uses a `PYPI_API_TOKEN` secret; every GitHub Action is pinned to a full commit
+  SHA; the GitHub Release step runs in its own job; publishing only runs from `main`.
+- `requests>=2.32.4` (the old `>=2.28.0` floor allowed versions with known CVEs,
+  e.g. the netrc credential leak fixed in 2.32.4).
+- **Behaviour change:** `http://` base URLs to non-loopback hosts now raise
+  `InvalidRequestError` when the client is constructed (`base_url`, `api_base_url`
+  and `SWFTE_API_BASE_URL`), matching the Node SDK. `http://` stays valid for
+  `localhost`, `127.0.0.1` and `::1`; everything else must use `https://`.
+- `urllib3>=2.8.0` is now a direct requirement (GHSA-vxq7-64xx-v4gw, unbounded
+  chunk-size line buffering in `HTTPResponse.stream()`/`read_chunked()`).
+
+### Breaking
+
+- **Python 3.10 or later is required.** `urllib3>=2.8.0`, which carries the fix
+  above, does not support Python 3.8 or 3.9. The package metadata
+  (`Requires-Python: >=3.10`) makes pip refuse to install it there; upgrade the
+  interpreter. 3.8 and 3.9 are removed from the CI matrix and classifiers.
+
+### Fixed
+
+- README badge and links pointed at the unregistered PyPI name `swfte`; they now
+  point at `swfte-sdk`.
+- Removed the syntactically invalid `swfte/analytics.py` that shipped in the wheel
+  and sdist (shadowed by the `swfte/analytics/` package, which is unchanged).
+- `chat.completions.create` no longer retries read timeouts or generic connection
+  failures after an accepted body (a retry could run and bill the call more than
+  once); only pre-send `ConnectTimeout` is retried, 403 is an
+  `AuthenticationError`, and `max_retries=0` makes one attempt instead of
+  silently returning `None`.
+- Authenticated SDK requests no longer follow redirects. Every 3xx is an
+  `APIError` with the original status/body; a 307/308 cannot forward prompts,
+  files or audio to another origin. Use the final endpoint URL directly.
+- Preserve Python 3.8 builds with a compatible setuptools 68–76 backend range
+  and legacy PEP 621 LICENSE metadata; CI includes 3.8 and builds actual artifacts
+  before packaging tests. Wheel and sdist retain the MIT license.
+- All V2 management resources raise `AuthenticationError` for 401/403 and
+  `RateLimitError` for 429 (they raised a bare `requests.HTTPError`); other
+  status codes still raise `requests.HTTPError`.
+- `agents.chat` reads the reply from `content` first, then `response` (the server
+  returns `content`).
+- `User-Agent` and `swfte.__version__` now report the real package version.
+- `py.typed` is now shipped, matching the `Typing :: Typed` classifier.
+
+### Carried over from the 1.1.x development line (also in 1.2.0)
 
 ### Fixed
 

@@ -19,6 +19,8 @@ from typing import Optional, List, Dict, Any, Callable
 from datetime import datetime, timedelta
 from enum import Enum
 import requests
+from .. import _http
+from .._privacy import credential_safe
 import json
 
 
@@ -362,6 +364,7 @@ class EnterpriseAnalytics:
 # Team Analytics
 # =============================================================================
 
+@credential_safe
 class TeamAnalytics:
     """Multi-user and team analytics."""
 
@@ -386,7 +389,7 @@ class TeamAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -432,7 +435,7 @@ class TeamAnalytics:
         """Get all team members with analytics."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/teams/{team_id}/members"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params={"orderBy": order_by, "orderDir": order_dir, "limit": limit},
@@ -471,7 +474,7 @@ class TeamAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -486,6 +489,7 @@ class TeamAnalytics:
 # Anomaly Detection
 # =============================================================================
 
+@credential_safe
 class AnomalyDetection:
     """ML-powered anomaly detection."""
 
@@ -511,7 +515,7 @@ class AnomalyDetection:
         if workspace_id:
             params["workspaceId"] = workspace_id
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -559,7 +563,7 @@ class AnomalyDetection:
         if severity:
             params["severity"] = severity
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -596,7 +600,7 @@ class AnomalyDetection:
         """Configure custom anomaly thresholds."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/anomalies/thresholds"
 
-        response = requests.put(
+        response = _http.put(
             url,
             headers=self._client._get_headers(),
             json={"workspaceId": workspace_id, "thresholds": thresholds},
@@ -611,6 +615,7 @@ class AnomalyDetection:
 # A/B Testing
 # =============================================================================
 
+@credential_safe
 class ABTestingAnalytics:
     """A/B testing framework for LLM experiments."""
 
@@ -643,7 +648,7 @@ class ABTestingAnalytics:
             "minSampleSize": min_sample_size,
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -658,7 +663,7 @@ class ABTestingAnalytics:
         """Get A/B test results."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/ab-tests/{test_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -682,7 +687,7 @@ class ABTestingAnalytics:
         if status:
             params["status"] = status
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -700,7 +705,7 @@ class ABTestingAnalytics:
         if winner:
             payload["winner"] = winner
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -734,6 +739,7 @@ class ABTestingAnalytics:
 # Compliance Reporting
 # =============================================================================
 
+@credential_safe
 class ComplianceReporting:
     """Compliance auditing and reporting."""
 
@@ -761,7 +767,7 @@ class ComplianceReporting:
         if end_date:
             payload["endDate"] = end_date
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -806,7 +812,7 @@ class ComplianceReporting:
         if action_type:
             params["actionType"] = action_type
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -834,7 +840,7 @@ class ComplianceReporting:
         if pii_retention_days:
             payload["piiRetentionDays"] = pii_retention_days
 
-        response = requests.put(
+        response = _http.put(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -849,6 +855,7 @@ class ComplianceReporting:
 # Cost Optimization
 # =============================================================================
 
+@credential_safe
 class CostOptimization:
     """AI-powered cost optimization recommendations."""
 
@@ -873,7 +880,7 @@ class CostOptimization:
             "maxEffort": max_effort,
         }
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -914,7 +921,7 @@ class CostOptimization:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -943,7 +950,7 @@ class CostOptimization:
         if monthly_budget_usd:
             payload["monthlyBudgetUsd"] = monthly_budget_usd
 
-        response = requests.put(
+        response = _http.put(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -958,6 +965,7 @@ class CostOptimization:
 # Model Comparison
 # =============================================================================
 
+@credential_safe
 class ModelComparison:
     """Model benchmarking and comparison analytics."""
 
@@ -985,7 +993,7 @@ class ModelComparison:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1026,7 +1034,7 @@ class ModelComparison:
         if max_cost_per_request:
             params["maxCostPerRequest"] = max_cost_per_request
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1041,6 +1049,7 @@ class ModelComparison:
 # User Journey Analytics
 # =============================================================================
 
+@credential_safe
 class UserJourneyAnalytics:
     """User journey tracking and lifecycle analytics."""
 
@@ -1054,7 +1063,7 @@ class UserJourneyAnalytics:
         """Get a user's journey."""
         url = f"{self._get_base_url()}/v1/analytics/enterprise/journeys/{user_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -1094,7 +1103,7 @@ class UserJourneyAnalytics:
             "periods": periods,
         }
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1114,7 +1123,7 @@ class UserJourneyAnalytics:
 
         params = {"workspaceId": workspace_id, "threshold": threshold}
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1129,6 +1138,7 @@ class UserJourneyAnalytics:
 # RAG Quality Metrics
 # =============================================================================
 
+@credential_safe
 class RAGQualityMetrics:
     """RAG system quality and performance metrics."""
 
@@ -1153,7 +1163,7 @@ class RAGQualityMetrics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1196,7 +1206,7 @@ class RAGQualityMetrics:
         if ground_truth:
             payload["groundTruth"] = ground_truth
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -1211,6 +1221,7 @@ class RAGQualityMetrics:
 # Embedding Analytics
 # =============================================================================
 
+@credential_safe
 class EmbeddingAnalytics:
     """Embedding quality and usage analytics."""
 
@@ -1238,7 +1249,7 @@ class EmbeddingAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -1274,7 +1285,7 @@ class EmbeddingAnalytics:
         if labels:
             payload["labels"] = labels
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,

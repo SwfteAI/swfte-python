@@ -1,0 +1,636 @@
+{
+  "status": "SOURCE_ONLY_RUNTIME_PENDING",
+  "source_base": "89fb09d36ac9c4e64b2178069f062936c8aa8e92",
+  "early_production_checkpoint": "7635707",
+  "guarded_calls": 111,
+  "files": [
+    {
+      "path": "swfte/chat.py",
+      "guarded_call_count": 2
+    },
+    {
+      "path": "swfte/_http.py"
+    },
+    {
+      "path": "swfte/client.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/_base.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/audio.py",
+      "guarded_call_count": 2
+    },
+    {
+      "path": "swfte/images.py",
+      "guarded_call_count": 2
+    },
+    {
+      "path": "swfte/embeddings.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/agents.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/workflows.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/conversations.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/secrets.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/deployments.py",
+      "guarded_call_count": 1
+    },
+    {
+      "path": "swfte/analytics/core.py",
+      "guarded_call_count": 12
+    },
+    {
+      "path": "swfte/analytics/custom.py",
+      "guarded_call_count": 18
+    },
+    {
+      "path": "swfte/analytics/enterprise.py",
+      "guarded_call_count": 25
+    },
+    {
+      "path": "swfte/analytics/realtime.py",
+      "guarded_call_count": 8
+    },
+    {
+      "path": "swfte/analytics/forecasting.py",
+      "guarded_call_count": 8
+    },
+    {
+      "path": "swfte/analytics/alerts.py",
+      "guarded_call_count": 24
+    }
+  ],
+  "calls": [
+    {
+      "file": "swfte/_base.py",
+      "line": 86,
+      "verb": "request"
+    },
+    {
+      "file": "swfte/secrets.py",
+      "line": 151,
+      "verb": "request"
+    },
+    {
+      "file": "swfte/audio.py",
+      "line": 69,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/audio.py",
+      "line": 137,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/workflows.py",
+      "line": 387,
+      "verb": "request"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 261,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 309,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 359,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 373,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 390,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 404,
+      "verb": "patch"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 418,
+      "verb": "delete"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 481,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 506,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 533,
+      "verb": "delete"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 576,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 600,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 653,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 667,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 680,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 694,
+      "verb": "patch"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 726,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/custom.py",
+      "line": 752,
+      "verb": "delete"
+    },
+    {
+      "file": "swfte/agents.py",
+      "line": 186,
+      "verb": "request"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 332,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 431,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 503,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 552,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 607,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 631,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 668,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 695,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 734,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 789,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 865,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/core.py",
+      "line": 922,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 173,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 210,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 270,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 319,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 380,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 420,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 493,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/forecasting.py",
+      "line": 543,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/client.py",
+      "line": 356,
+      "verb": "request"
+    },
+    {
+      "file": "swfte/embeddings.py",
+      "line": 54,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 390,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 436,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 475,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 515,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 563,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 600,
+      "verb": "put"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 647,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 662,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 686,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 704,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 765,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 810,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 838,
+      "verb": "put"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 877,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 918,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 947,
+      "verb": "put"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 989,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1030,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1058,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1098,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1118,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1157,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1200,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1242,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/enterprise.py",
+      "line": 1278,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 243,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 329,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 351,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 375,
+      "verb": "delete"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 410,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 584,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 624,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/realtime.py",
+      "line": 642,
+      "verb": "put"
+    },
+    {
+      "file": "swfte/models.py",
+      "line": 262,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/models.py",
+      "line": 285,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/chat.py",
+      "line": 98,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/chat.py",
+      "line": 132,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/images.py",
+      "line": 73,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/images.py",
+      "line": 128,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 268,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 282,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 305,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 319,
+      "verb": "patch"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 333,
+      "verb": "delete"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 398,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 429,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 443,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 465,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 490,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 516,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 621,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 645,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 671,
+      "verb": "delete"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 683,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 726,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 749,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 774,
+      "verb": "delete"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 816,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 837,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 900,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 922,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 976,
+      "verb": "post"
+    },
+    {
+      "file": "swfte/analytics/alerts.py",
+      "line": 999,
+      "verb": "get"
+    },
+    {
+      "file": "swfte/conversations.py",
+      "line": 148,
+      "verb": "request"
+    },
+    {
+      "file": "swfte/deployments.py",
+      "line": 139,
+      "verb": "request"
+    }
+  ]
+}

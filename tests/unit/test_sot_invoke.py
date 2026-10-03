@@ -64,8 +64,8 @@ class TestBaseUrl:
 
     def test_explicit_wins(self, monkeypatch):
         monkeypatch.setenv("SWFTE_API_BASE_URL", "https://env.test/agents")
-        c = SwfteClient(api_key="k", api_base_url="http://local:1/")
-        assert c.api_base_url == "http://local:1"
+        c = SwfteClient(api_key="k", api_base_url="http://localhost:1/")
+        assert c.api_base_url == "http://localhost:1"
 
     def test_env(self, monkeypatch):
         monkeypatch.setenv("SWFTE_API_BASE_URL", "https://env.test/agents/")
@@ -73,11 +73,11 @@ class TestBaseUrl:
 
     def test_existing_resources_follow_api_base_url(self, monkeypatch):
         monkeypatch.delenv("SWFTE_API_BASE_URL", raising=False)
-        c = SwfteClient(api_key="k", api_base_url="http://local:1")
-        with patch("requests.request", return_value=MagicMock(content=b"")) as m:
+        c = SwfteClient(api_key="k", api_base_url="http://localhost:1")
+        with patch("requests.request", return_value=MagicMock(content=b"", status_code=204)) as m:
             m.return_value.raise_for_status.return_value = None
             c.workflows.delete("wf_1")
-        assert kw(m)["url"] == "http://local:1/v2/workflows/wf_1"
+        assert kw(m)["url"] == "http://localhost:1/v2/workflows/wf_1"
 
 
 class TestAgentChat:
@@ -260,7 +260,7 @@ class TestWorkflowInvoke:
         assert done.succeeded
 
     def test_execute_still_uses_draft_path(self, client):
-        r = MagicMock(content=b'{"executionId": "ex_2"}')
+        r = MagicMock(content=b'{"executionId": "ex_2"}', status_code=200)
         r.json.return_value = {"executionId": "ex_2"}
         with patch("requests.request", return_value=r) as m:
             client.workflows.execute("wf_1", {"a": 1})

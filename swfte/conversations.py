@@ -7,6 +7,10 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 import requests
 
+from . import _http
+from ._privacy import credential_safe
+from ._base import _raise_for_status
+
 
 @dataclass
 class Message:
@@ -97,6 +101,7 @@ class MessagePage:
         )
 
 
+@credential_safe
 class Conversations:
     """
     Conversation management API for storing and managing conversation history.
@@ -142,7 +147,7 @@ class Conversations:
         """Make an HTTP request."""
         headers = self._client._get_headers()
 
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,
@@ -151,7 +156,7 @@ class Conversations:
             timeout=self._client.timeout,
         )
 
-        response.raise_for_status()
+        _raise_for_status(response, method, url)
 
         if response.content:
             return response.json()
@@ -387,5 +392,3 @@ class Conversations:
         """
         url = f"{self._get_base_url()}/{conversation_id}/messages"
         self._make_request("DELETE", url)
-
-

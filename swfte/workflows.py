@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from urllib.parse import quote
 import requests
+
+from . import _http
+from ._privacy import credential_safe
+from ._base import _raise_for_status
 import time
 
 from .exceptions import (
@@ -333,6 +337,7 @@ class ValidationResult:
         )
 
 
+@credential_safe
 class Workflows:
     """
     Workflow management API for creating, executing, and managing workflows.
@@ -381,7 +386,7 @@ class Workflows:
         """Make an HTTP request."""
         headers = self._client._get_headers()
         
-        response = requests.request(
+        response = _http.request(
             method=method,
             url=url,
             headers=headers,
@@ -390,7 +395,7 @@ class Workflows:
             timeout=self._client.timeout,
         )
         
-        response.raise_for_status()
+        _raise_for_status(response, method, url)
         
         if response.content:
             return response.json()
@@ -921,8 +926,6 @@ class Workflows:
         """
         url = f"{self._get_base_url()}/{workflow_id}/agent/{agent_id}"
         self._make_request("DELETE", url)
-
-
 
 
 

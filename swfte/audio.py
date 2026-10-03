@@ -4,9 +4,12 @@ Audio API (transcription and text-to-speech).
 
 from typing import Optional, Literal
 import requests
+from . import _http
+from ._privacy import credential_safe
 from .exceptions import APIError, AuthenticationError
 
 
+@credential_safe
 class Transcriptions:
     """Audio transcription resource."""
     
@@ -65,7 +68,7 @@ class Transcriptions:
         headers = self.client._get_headers()
         del headers["Content-Type"]
         
-        response = requests.post(
+        response = _http.post(
             url,
             files=files,
             data=data,
@@ -83,6 +86,7 @@ class Transcriptions:
         return {"text": response.text}
 
 
+@credential_safe
 class Speech:
     """Text-to-speech resource."""
     
@@ -133,7 +137,7 @@ class Speech:
         
         headers = self.client._get_headers()
         
-        response = requests.post(
+        response = _http.post(
             url,
             json=payload,
             headers=headers,
@@ -155,4 +159,3 @@ class Audio:
         self.client = client
         self.transcriptions = Transcriptions(client)
         self.speech = Speech(client)
-

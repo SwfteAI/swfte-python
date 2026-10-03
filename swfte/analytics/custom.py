@@ -16,6 +16,8 @@ from enum import Enum
 import requests
 
 
+from .. import _http
+from .._privacy import credential_safe
 # =============================================================================
 # Enums
 # =============================================================================
@@ -257,7 +259,7 @@ class CustomMetrics:
         if filters:
             payload["filters"] = filters
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -305,7 +307,7 @@ class CustomMetrics:
         if timestamp:
             payload["timestamp"] = timestamp
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -319,6 +321,7 @@ class CustomMetrics:
 # Metrics Manager
 # =============================================================================
 
+@credential_safe
 class MetricsManager:
     """Manage custom metric definitions."""
 
@@ -355,7 +358,7 @@ class MetricsManager:
         if source_metrics:
             payload["sourceMetrics"] = source_metrics
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -369,7 +372,7 @@ class MetricsManager:
         """Get a metric definition."""
         url = f"{self._get_base_url()}/v1/analytics/custom/metrics/{metric_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -386,7 +389,7 @@ class MetricsManager:
         if type:
             params["type"] = type
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -400,7 +403,7 @@ class MetricsManager:
         """Update a metric definition."""
         url = f"{self._get_base_url()}/v1/analytics/custom/metrics/{metric_id}"
 
-        response = requests.patch(
+        response = _http.patch(
             url,
             headers=self._client._get_headers(),
             json=updates,
@@ -414,7 +417,7 @@ class MetricsManager:
         """Delete a metric definition."""
         url = f"{self._get_base_url()}/v1/analytics/custom/metrics/{metric_id}"
 
-        response = requests.delete(
+        response = _http.delete(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -445,6 +448,7 @@ class MetricsManager:
 # Dimensions Manager
 # =============================================================================
 
+@credential_safe
 class DimensionsManager:
     """Manage custom dimensions."""
 
@@ -477,7 +481,7 @@ class DimensionsManager:
         if value_mapping:
             payload["valueMapping"] = value_mapping
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -502,7 +506,7 @@ class DimensionsManager:
         """List all custom dimensions."""
         url = f"{self._get_base_url()}/v1/analytics/custom/dimensions"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -529,7 +533,7 @@ class DimensionsManager:
         """Delete a dimension."""
         url = f"{self._get_base_url()}/v1/analytics/custom/dimensions/{dimension_id}"
 
-        response = requests.delete(
+        response = _http.delete(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -542,6 +546,7 @@ class DimensionsManager:
 # Aggregations Manager
 # =============================================================================
 
+@credential_safe
 class AggregationsManager:
     """Manage pre-computed metric aggregations."""
 
@@ -572,7 +577,7 @@ class AggregationsManager:
             "retentionDays": retention_days,
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -596,7 +601,7 @@ class AggregationsManager:
         """List all aggregations."""
         url = f"{self._get_base_url()}/v1/analytics/custom/aggregations"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -623,6 +628,7 @@ class AggregationsManager:
 # Dashboards Manager
 # =============================================================================
 
+@credential_safe
 class DashboardsManager:
     """Manage custom dashboards."""
 
@@ -649,7 +655,7 @@ class DashboardsManager:
             "isShared": is_shared,
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -663,7 +669,7 @@ class DashboardsManager:
         """Get a dashboard."""
         url = f"{self._get_base_url()}/v1/analytics/custom/dashboards/{dashboard_id}"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout
@@ -676,7 +682,7 @@ class DashboardsManager:
         """List all dashboards."""
         url = f"{self._get_base_url()}/v1/analytics/custom/dashboards"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params={"includeShared": str(include_shared).lower()},
@@ -690,7 +696,7 @@ class DashboardsManager:
         """Update a dashboard."""
         url = f"{self._get_base_url()}/v1/analytics/custom/dashboards/{dashboard_id}"
 
-        response = requests.patch(
+        response = _http.patch(
             url,
             headers=self._client._get_headers(),
             json=updates,
@@ -722,7 +728,7 @@ class DashboardsManager:
             "options": options or {},
         }
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -748,7 +754,7 @@ class DashboardsManager:
         """Delete a dashboard."""
         url = f"{self._get_base_url()}/v1/analytics/custom/dashboards/{dashboard_id}"
 
-        response = requests.delete(
+        response = _http.delete(
             url,
             headers=self._client._get_headers(),
             timeout=self._client.timeout

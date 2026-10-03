@@ -4,10 +4,15 @@ Main client class for the Swfte SDK.
 
 import os
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
+from weakref import WeakKeyDictionary
 
 import requests
 
+from . import _http
 from ._base import _service_root
+from ._version import __version__
+from ._privacy import credential_safe, redact_diagnostic
 
 from .agent_wizard import AgentWizard
 from .agents import Agents
@@ -23,7 +28,7 @@ from .datasets import Datasets
 from .deployments import Deployments
 from .documents import Documents
 from .embeddings import Embeddings
-from .exceptions import APIError, AuthenticationError, RateLimitError, SwfteError
+from .exceptions import APIError, AuthenticationError, InvalidRequestError, RateLimitError, SwfteError
 from .files import Files
 from .images import Images
 from .marketplace import Marketplace
@@ -36,6 +41,35 @@ from .voice_calls import VoiceCalls
 from .workflows import Workflows
 
 
+_LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+_CREDENTIALS = WeakKeyDictionary()
+
+
+def _require_secure_url(url: str, what: str) -> None:
+    """Bearer credentials only travel over https; http is allowed for loopback hosts only.
+
+    Same rule as swfte-node's ``assertSecureUrl``. The message names only the scheme
+    and host (never userinfo, path or query), so it cannot echo a credential.
+    """
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+    except ValueError:
+        raise InvalidRequestError(f"{what} is not a valid URL") from None
+    if not parsed.scheme:
+        raise InvalidRequestError(f"{what} is not a valid URL")
+    if parsed.scheme == "https":
+        return
+    if parsed.scheme == "http" and hostname in _LOOPBACK_HOSTS:
+        return
+    host = parsed.netloc.rpartition("@")[2]
+    raise InvalidRequestError(
+        f"{what} must use https (http is allowed only for localhost, 127.0.0.1 and ::1); "
+        f"got {parsed.scheme}://{host}"
+    )
+
+
+@credential_safe
 class SwfteClient:
     """
     Swfte API client for accessing AI models, agents, workflows, chatflows,
@@ -46,7 +80,9 @@ class SwfteClient:
         base_url: Gateway URL (chat completions, images, embeddings, audio, models).
             Defaults to https://api.swfte.com/agents/v2/gateway.
         timeout: Request timeout in seconds. Defaults to 60.
-        max_retries: Maximum number of retries for failed requests. Defaults to 3.
+        max_retries: Non-streaming chat attempts after a pre-send ConnectTimeout.
+            Generic connection errors and every other call are never retried.
+            Values below 1 still make one attempt; defaults to 3.
         workspace_id: Workspace to scope requests to. Reads from SWFTE_WORKSPACE_ID.
         api_base_url: Root of the agents-service API, where agent chat
             (``/v1/agents/...``), workflow invoke (``/v2/workflows/...``), the
@@ -54,6 +90,10 @@ class SwfteClient:
             Defaults to SWFTE_API_BASE_URL, else ``base_url`` with its trailing
             ``/v2/gateway``, ``/v1/gateway`` or ``/gateway`` removed
             (https://api.swfte.com/agents by default).
+
+    Raises:
+        InvalidRequestError: ``base_url`` or ``api_base_url`` is not https (http is
+            accepted only for localhost, 127.0.0.1 and ::1) or is not a valid URL.
 
     Example:
         client = SwfteClient(api_key="sk-swfte-...")
@@ -74,17 +114,20 @@ class SwfteClient:
         workspace_id: Optional[str] = None,
         api_base_url: Optional[str] = None,
     ):
-        self.api_key = api_key or os.environ.get("SWFTE_API_KEY")
-        if not self.api_key:
+        credential = api_key or os.environ.get("SWFTE_API_KEY")
+        if not credential:
             raise ValueError(
                 "API key is required. Pass api_key parameter or set SWFTE_API_KEY environment variable."
             )
+        self.api_key = credential
 
         self.base_url = base_url.rstrip("/")
         explicit_api_base = api_base_url or os.environ.get("SWFTE_API_BASE_URL")
         self.api_base_url = (
             explicit_api_base.rstrip("/") if explicit_api_base else _service_root(self.base_url)
         )
+        _require_secure_url(self.base_url, "base_url")
+        _require_secure_url(self.api_base_url, "api_base_url")
         self.timeout = timeout
         self.max_retries = max_retries
         self.workspace_id = workspace_id or os.environ.get("SWFTE_WORKSPACE_ID")
@@ -116,6 +159,22 @@ class SwfteClient:
         self._cost_control = None
         self._agent_wizard = None
         self._catalog = None
+
+    @property
+    def api_key(self) -> str:
+        """Explicit credential access, retained for compatibility; avoid logging it."""
+        return _CREDENTIALS[self]
+
+    @api_key.setter
+    def api_key(self, value: str) -> None:
+        _CREDENTIALS[self] = value
+
+    def __repr__(self) -> str:
+        return redact_diagnostic("SwfteClient(base_url={!r}, api_base_url={!r}, api_key='[REDACTED]')".format(
+            self.base_url, self.api_base_url), self.api_key)
+
+    def __reduce_ex__(self, protocol):
+        raise TypeError("SwfteClient cannot be pickled; create a new client with an explicit credential")
 
     # ---- existing resources -------------------------------------------------
 
@@ -296,7 +355,7 @@ class SwfteClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "swfte-python/1.1.0",
+            "User-Agent": f"swfte-python/{__version__}",
         }
         if self.workspace_id:
             headers["X-Workspace-ID"] = self.workspace_id
@@ -330,7 +389,7 @@ class SwfteClient:
             clean_params = clean_params or None
 
         try:
-            response = requests.request(
+            response = _http.request(
                 method=method,
                 url=f"{self.api_base_url}{path}",
                 headers=self._get_headers(),
@@ -358,4 +417,3 @@ class SwfteClient:
                 raise RateLimitError(message)
             raise APIError(message, status_code=status, body=body)
         return body
-

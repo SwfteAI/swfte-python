@@ -4,10 +4,13 @@ Embeddings API.
 
 from typing import Union, List
 import requests
+from . import _http
+from ._privacy import credential_safe
 from .models import EmbeddingResponse
 from .exceptions import APIError, AuthenticationError
 
 
+@credential_safe
 class Embeddings:
     """Embeddings resource."""
     
@@ -50,7 +53,7 @@ class Embeddings:
         
         headers = self.client._get_headers()
         
-        response = requests.post(
+        response = _http.post(
             url,
             json=payload,
             headers=headers,
@@ -63,4 +66,3 @@ class Embeddings:
             raise APIError(f"API error: {response.status_code} - {response.text}")
         
         return EmbeddingResponse.from_dict(response.json())
-

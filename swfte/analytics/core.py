@@ -10,6 +10,8 @@ from typing import Optional, List, Dict, Any, Callable
 from datetime import datetime, timedelta
 from enum import Enum
 import requests
+from .. import _http
+from .._privacy import credential_safe
 import json
 
 
@@ -287,6 +289,7 @@ class Analytics:
         return self._custom
 
 
+@credential_safe
 class PromptAnalytics:
     """Prompt pattern analytics with enterprise extensions."""
 
@@ -328,7 +331,7 @@ class PromptAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -427,7 +430,7 @@ class PromptAnalytics:
         if ab_test_variant:
             params["abTestVariant"] = ab_test_variant
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -499,7 +502,7 @@ class PromptAnalytics:
             "includeRelated": str(include_related).lower(),
         }
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -548,7 +551,7 @@ class PromptAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -577,6 +580,7 @@ class PromptAnalytics:
         return result
 
 
+@credential_safe
 class PIIAnalytics:
     """Enterprise PII detection with compliance features."""
 
@@ -603,7 +607,7 @@ class PIIAnalytics:
         if compliance_mode:
             payload["complianceMode"] = compliance_mode
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json=payload,
@@ -627,7 +631,7 @@ class PIIAnalytics:
         """Check if text contains PII."""
         url = f"{self._get_base_url()}/v1/analytics/prompts/pii/check"
 
-        response = requests.post(
+        response = _http.post(
             url,
             headers=self._client._get_headers(),
             json={"text": text},
@@ -664,7 +668,7 @@ class PIIAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -691,7 +695,7 @@ class PIIAnalytics:
         """
         url = f"{self._get_base_url()}/v1/analytics/prompts/pii/risk-report"
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params={"workspaceId": workspace_id, "period": period},
@@ -702,6 +706,7 @@ class PIIAnalytics:
         return response.json()
 
 
+@credential_safe
 class ConversationAnalytics:
     """Conversation analytics with enterprise features."""
 
@@ -730,7 +735,7 @@ class ConversationAnalytics:
 
         params = {"includeAnalytics": str(include_analytics).lower()}
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -785,7 +790,7 @@ class ConversationAnalytics:
 
         params = {"limit": limit, "newestFirst": str(newest_first).lower()}
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -861,7 +866,7 @@ class ConversationAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
@@ -918,7 +923,7 @@ class ConversationAnalytics:
         if end_date:
             params["endDate"] = end_date
 
-        response = requests.get(
+        response = _http.get(
             url,
             headers=self._client._get_headers(),
             params=params,
