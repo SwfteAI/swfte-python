@@ -36,7 +36,7 @@ jobs:
           pip install pytest pytest-cov build twine
           python -m build
           python -m twine check dist/*
-          pytest --cov=swfte --cov-report=xml --cov-report=term-missing
+          pytest --cov=swfte --cov-branch --cov-config="$GITHUB_WORKSPACE/pyproject.toml" --cov-report=xml --cov-report=term-missing
 
       - name: Lint with ruff (advisory)
         run: |

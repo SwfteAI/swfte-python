@@ -1,6 +1,7 @@
 """Behavioral error/representation controls with only synthetic credentials."""
 
 import json
+import linecache
 import pickle
 import traceback
 from urllib.parse import quote
@@ -32,14 +33,75 @@ def response(value, status=200, key=KEY):
     return result
 
 
+def semantic_traceback(error):
+    """Keep source and exception text; omit interpreter column decorations."""
+    summary = traceback.TracebackException(type(error), error, error.__traceback__)
+    pending = [summary]
+    seen = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        current.stack = traceback.StackSummary.from_list([
+            (frame.filename, frame.lineno, frame.name, frame.line)
+            for frame in current.stack
+        ])
+        pending.extend(item for item in (current.__cause__, current.__context__)
+                       if item is not None)
+        pending.extend(getattr(current, "exceptions", None) or [])
+    return "".join(summary.format())
+
+
 def assert_private(error, key=KEY):
     diagnostic = "\n".join([str(error), repr(error), repr(vars(error)),
-                             "".join(traceback.format_exception(type(error), error, error.__traceback__))])
+                             semantic_traceback(error)])
     for literal in [key, repr(key)[1:-1], json.dumps(key)[1:-1], quote(key, safe="")]:
         assert literal not in diagnostic
     assert error.__context__ is None
     if error.__cause__ is not None:
         assert_private(error.__cause__, key)
+
+
+def test_traceback_normalization_still_rejects_semantic_credential_leaks(monkeypatch):
+    marker = RuntimeError("semantic decoration\n    ~~~~^^^^")
+    assert str(marker) in semantic_traceback(marker)
+    with pytest.raises(AssertionError):
+        assert_private(marker, "~")
+
+    for key in ["~", KEY]:
+        for literal in [key, repr(key)[1:-1], json.dumps(key)[1:-1], quote(key, safe="")]:
+            message = RuntimeError("semantic message " + literal)
+            assert literal in semantic_traceback(message)
+            with pytest.raises(AssertionError):
+                assert_private(message, key)
+
+            cause = RuntimeError("semantic cause " + literal)
+            outer = RuntimeError("safe outer message")
+            outer.__cause__ = cause
+            assert literal in semantic_traceback(outer)
+            with pytest.raises(AssertionError):
+                assert_private(outer, key)
+
+            context = RuntimeError("semantic context " + literal)
+            outer = RuntimeError("safe outer message")
+            outer.__context__ = context
+            assert literal in semantic_traceback(outer)
+            with pytest.raises(AssertionError):
+                assert_private(outer, key)
+
+            filename = "<synthetic-credential-source>"
+            source = 'raise RuntimeError("safe message")  # ' + literal + "\n"
+            monkeypatch.setitem(linecache.cache, filename,
+                                (len(source), None, [source], filename))
+            try:
+                exec(compile(source, filename, "exec"), {})
+            except RuntimeError as captured:
+                assert literal in semantic_traceback(captured)
+                with pytest.raises(AssertionError):
+                    assert_private(captured, key)
+            else:
+                pytest.fail("the synthetic source must raise")
 
 
 def test_client_vars_repr_and_pickle_do_not_retain_credential():

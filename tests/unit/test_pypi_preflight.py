@@ -1,6 +1,7 @@
 """Stdlib preflight branches with mocks and isolated loopback; no registry call."""
 
 import importlib.util
+import io
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -19,14 +20,14 @@ def test_pypi_exact_404_is_the_only_publication_positive_control():
     def absent(url, timeout):
         assert url == "https://pypi.org/pypi/swfte-sdk/1.2.0/json"
         assert timeout == 15
-        raise HTTPError(url, 404, "missing", {}, None)
+        raise HTTPError(url, 404, "missing", {}, io.BytesIO(b""))
     module.require_unpublished("1.2.0", absent)
 
 
 def test_pypi_existing_forbidden_redirect_outage_and_network_failure_block_publication():
     for status in [200, 301, 403, 429, 500, 503]:
         def failed(url, timeout):
-            raise HTTPError(url, status, "fixture", {}, None)
+            raise HTTPError(url, status, "fixture", {}, io.BytesIO(b""))
         with pytest.raises(RuntimeError):
             module.require_unpublished("1.2.0", failed)
     for failure in [URLError("offline fixture"), TimeoutError("timeout fixture")]:
