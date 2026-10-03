@@ -37,6 +37,7 @@ class ExecutionStatus(Enum):
     COMPLETED = "COMPLETED"
     SUCCESS = "SUCCESS"
     SUCCEEDED = "SUCCEEDED"
+    PARTIAL = "PARTIAL"
     FAILED = "FAILED"
     TIMEOUT = "TIMEOUT"
     CANCELLED = "CANCELLED"
@@ -56,11 +57,13 @@ PAUSED_STATUSES = frozenset({"PAUSED", "WAITING_FOR_INPUT", "WAITING", "AWAITING
 
 
 def classify_execution_status(status: Optional[str]) -> str:
-    """Return ``"succeeded"``, ``"failed"``, ``"cancelled"``, ``"paused"`` or ``"running"``
+    """Return ``"succeeded"``, ``"partial"``, ``"failed"``, ``"cancelled"``, ``"paused"`` or ``"running"``
     for a raw status string (case-insensitive; unknown or missing -> running)."""
     s = (status or "").upper()
     if s in SUCCESS_STATUSES:
         return "succeeded"
+    if s == "PARTIAL":
+        return "partial"
     if s in FAILURE_STATUSES:
         return "failed"
     if s in CANCELLED_STATUSES:
@@ -687,7 +690,7 @@ class Workflows:
         timeout: float = 300, poll_interval: float = 2, raise_on_pause: bool = False,
         *, callsite: Optional[str] = None,
     ) -> WorkflowExecution:
-        """Invoke the selected snapshot and poll; attribution belongs only to the POST."""
+        """Invoke the selected snapshot and poll; PARTIAL raises with the current execution; attribution belongs only to the POST."""
         self._validate_version(version)
         invocation = self._invoke(workflow_id, inputs, resolve_callsite(callsite), version)
         return self._poll_until_terminal(invocation.execution_id, timeout, poll_interval, raise_on_pause)
@@ -727,7 +730,14 @@ class Workflows:
         response = self._client._api_request(
             "GET", f"/v2/workflows/executions/{quote(execution_id, safe='')}/status"
         )
-        execution = WorkflowExecution.from_dict(response or {})
+        data = response if isinstance(response, dict) else {}
+        nested = data.get("execution") if isinstance(data.get("execution"), dict) else {}
+        # Every supplied alias must match; fallback is only for entirely absent identity members.
+        for record in (data, nested):
+            for key in ("executionId", "id"):
+                if key in record and record[key] != execution_id:
+                    raise APIError("Execution status identity mismatch", status_code=502)
+        execution = WorkflowExecution.from_dict(data)
         if not execution.id:
             execution.id = execution_id
         return execution
@@ -763,7 +773,7 @@ class Workflows:
             or the paused execution (``.paused`` True) when it waits for input.
 
         Raises:
-            WorkflowExecutionError: the run ended FAILED/TIMEOUT or CANCELLED/CANCELED
+            WorkflowExecutionError: the run ended PARTIAL (terminal non-success), FAILED/TIMEOUT or CANCELLED/CANCELED
                 (``.execution`` holds the final status). Also a ``RuntimeError``.
             WorkflowTimeoutError: ``timeout`` elapsed first; the run is not cancelled and
                 ``.execution_id`` can still be polled. Also a ``TimeoutError``.
@@ -791,6 +801,10 @@ class Workflows:
                         execution_id, status, execution.waiting_for, execution,
                     )
                 return execution
+            if outcome == "partial":
+                raise WorkflowExecutionError(
+                    f"Execution {execution_id} completed partially", execution_id, status, execution
+                )
             if outcome == "failed":
                 detail = f": {execution.error}" if execution.error else ""
                 raise WorkflowExecutionError(
@@ -877,7 +891,7 @@ class Workflows:
 
         Raises:
             WorkflowTimeoutError (a ``TimeoutError``): execution didn't finish within timeout.
-            WorkflowExecutionError (a ``RuntimeError``): execution failed or was cancelled.
+            WorkflowExecutionError (a ``RuntimeError``): execution ended partially, failed or was cancelled.
         """
         return self._poll_until_terminal(execution_id, timeout, poll_interval, raise_on_pause)
 

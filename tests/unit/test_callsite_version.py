@@ -26,8 +26,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('X-Workspace-Id') == 'B' or (segment is not None and self.server.published.get(segment) not in ('PUBLISHED','DEPRECATED')):
             status,body=404,{'error':'VERSION_NOT_PUBLISHED'}
         elif self.path.endswith('/status'):
-            version=self.server.executions[self.path.split('/')[-2]]
-            status,body=200,{'execution':{'executionId':'ex','status':'SUCCEEDED','workflowVersion':version,'outputData':{'marker':'snapshot-'+str(version)}}}
+            execution_id=self.path.split('/')[-2]
+            version=self.server.executions[execution_id]
+            status,body=200,{'execution':{'executionId':execution_id,'status':'SUCCEEDED','workflowVersion':version,'outputData':{'marker':'snapshot-'+str(version)}}}
         else:
             version=segment if segment is not None else self.server.live
             eid='ex_'+str(len(self.server.executions)); self.server.executions[eid]=version

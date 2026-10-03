@@ -163,6 +163,40 @@ class TestWorkflowInvoke:
             with pytest.raises(APIError):
                 client.workflows.invoke("wf_1")
 
+    def test_status_identity_is_checked_before_terminal_classification(self, client):
+        bodies = [
+            {"executionId": "other", "status": "SUCCEEDED"},
+            {"execution": {"executionId": "other", "status": "SUCCEEDED"}},
+            {"executionId": "ex_1", "execution": {"executionId": "other", "status": "SUCCEEDED"}},
+            {"executionId": "other", "execution": {"executionId": "ex_1", "status": "SUCCEEDED"}},
+            {"executionId": "ex_1", "id": "other", "status": "SUCCEEDED"},
+            {"execution": {"executionId": "ex_1", "id": "other", "status": "SUCCEEDED"}},
+            {"id": "other", "status": "PAUSED"},
+            {"executionId": None, "status": "SUCCEEDED"},
+            {"executionId": 1, "status": "SUCCEEDED"},
+            {"executionId": "", "status": "SUCCEEDED"},
+        ]
+        for body in bodies:
+            with patch("requests.request", return_value=resp(body)) as request:
+                with pytest.raises(APIError) as failure:
+                    client.workflows.wait_for_completion("ex_1", timeout=1, poll_interval=0)
+                assert failure.value.status_code == 502
+                assert request.call_count == 1
+
+    def test_exact_status_identities_and_all_absent_path_fallback(self, client):
+        for body in [
+            {"execution": {"executionId": "ex_1", "status": "SUCCEEDED", "outputData": {"answer": 42}}},
+            {"executionId": "ex_1", "id": "ex_1", "execution": {"executionId": "ex_1", "id": "ex_1", "status": "SUCCEEDED"}},
+            {"id": "ex_1", "status": "SUCCEEDED"},
+            {"status": "SUCCEEDED"},
+        ]:
+            with patch("requests.request", return_value=resp(body)) as request:
+                done = client.workflows.wait_for_completion("ex_1", timeout=1, poll_interval=0)
+                assert done.id == "ex_1" and done.succeeded
+                if "outputData" in body.get("execution", {}):
+                    assert done.outputs == {"answer": 42}
+                assert request.call_count == 1
+
     def test_get_execution_status_lifts_nested_record(self, client):
         body = status_body("success", outputData={"answer": 42})
         with patch("requests.request", return_value=resp(body)) as m:
@@ -372,3 +406,58 @@ class TestPausedRunsReturnEarly:
         with patch("requests.request", side_effect=[resp(status_body("PAUSED"))]):
             res = client.workflows.wait_for_completion("ex_1", timeout=300, poll_interval=0.001)
         assert res.paused is True
+
+
+
+class TestNativePartial:
+    @pytest.mark.parametrize("mode", ["invoke", "version", "legacy"])
+    @pytest.mark.parametrize("terminal", ["PARTIAL", "SUCCEEDED"])
+    def test_first_terminal_get_preserves_current_execution(self, client, mode, terminal):
+        responses = [] if mode == "legacy" else [resp({"executionId": "ex_1", "status": "RUNNING"}, 202)]
+        responses.append(resp(status_body(terminal, outputData={"retained": 42})))
+        def wait():
+            if mode == "invoke":
+                return client.workflows.invoke_and_wait("wf_1", timeout=1, poll_interval=0)
+            if mode == "version":
+                return client.workflows.invoke_version_and_wait("wf_1", "1.0.7", timeout=1, poll_interval=0)
+            return client.workflows.wait_for_completion("ex_1", timeout=1, poll_interval=0)
+        with patch("requests.request", side_effect=responses) as request:
+            if terminal == "PARTIAL":
+                with pytest.raises(WorkflowExecutionError) as caught:
+                    wait()
+                error = caught.value
+                assert not isinstance(error, WorkflowTimeoutError)
+                assert error.status == "PARTIAL" and error.execution_id == "ex_1"
+                assert error.execution.status is ExecutionStatus.PARTIAL
+                assert error.execution.status_raw == "PARTIAL" and error.execution.id == "ex_1"
+                assert error.execution.is_terminal and not error.execution.succeeded
+                assert error.execution.outcome == "partial" and error.execution.outputs == {"retained": 42}
+            else:
+                done = wait()
+                assert done.succeeded and done.outcome == "succeeded"
+            assert request.call_count == (1 if mode == "legacy" else 2)
+            assert kw(request)["method"] == "GET"
+            assert kw(request)["url"] == f"{API}/v2/workflows/executions/ex_1/status"
+            if mode != "legacy":
+                pin = "/versions/1.0.7" if mode == "version" else ""
+                assert kw(request, 0)["url"] == f"{API}/v2/workflows/wf_1{pin}/invoke"
+
+    @pytest.mark.parametrize("status", ["PAUSED", None, "NATIVE_FUTURE"])
+    def test_prior_pause_missing_unknown_wait_rules(self, client, status):
+        body = status_body(status)
+        if status is None:
+            body["execution"].pop("status")
+        with patch("requests.request", return_value=resp(body)) as request:
+            if status == "PAUSED":
+                assert client.workflows.wait_for_completion("ex_1", timeout=0).paused
+            else:
+                with pytest.raises(WorkflowTimeoutError):
+                    client.workflows.wait_for_completion("ex_1", timeout=0)
+            assert request.call_count == 1
+        assert classify_execution_status("partial") == "partial"
+
+    def test_foreign_partial_is_still_502(self, client):
+        with patch("requests.request", return_value=resp(status_body("PARTIAL", executionId="foreign"))) as request:
+            with pytest.raises(APIError) as caught:
+                client.workflows.wait_for_completion("ex_1", timeout=0)
+            assert caught.value.status_code == 502 and request.call_count == 1
